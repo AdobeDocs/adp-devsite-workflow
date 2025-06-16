@@ -9,6 +9,9 @@ on:
       baseSha:
         type: string
         required: false
+      deployAll:
+        type: boolean
+        default: false
 
 jobs:
   set-state:

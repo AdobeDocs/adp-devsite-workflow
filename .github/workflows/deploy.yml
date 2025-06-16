@@ -162,7 +162,7 @@ jobs:
         run: sleep 30s
         shell: bash
 
-      - name: Clean cache on stage
+      - name: Clean cache on only changed files on stage
         if: needs.set-state.outputs.deploy_stage == 'true' && steps.changed-files-specific.outputs.any_modified == 'true' && needs.set-state.outputs.deploy_All == 'false'
         uses: actions/github-script@v7
         with:
@@ -274,7 +274,7 @@ jobs:
         run: sleep 30s
         shell: bash
 
-      - name: Clean cache on prod
+      - name: Clean cache on only changed files on prod
         if: needs.set-state.outputs.deploy_prod == 'true' && steps.changed-files-specific.outputs.any_modified == 'true' && needs.set-state.outputs.deploy_All == 'false'
         uses: actions/github-script@v7
         with:

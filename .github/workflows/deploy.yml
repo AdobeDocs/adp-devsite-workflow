@@ -33,7 +33,7 @@ jobs:
         with:
           repository: AdobeDocs/adp-devsite-scripts
           path: scripts
-          ref: main
+          ref: deploy-fix
 
       - name: Get path prefix
         uses: actions/github-script@v7

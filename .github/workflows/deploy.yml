@@ -79,7 +79,7 @@ jobs:
           path: scripts
           ref: main
 
-      - name: Get changed files in the src/pages and static folder
+      - name: Get changed files in the src/pages folder
         if: needs.set-state.outputs.deploy_All == 'false'
         id: changed-files-specific
         uses: tj-actions/changed-files@v46.0.5
@@ -88,21 +88,17 @@ jobs:
           escape_json: false
           files: |
             src/pages/**
-            static/**
           base_sha: ${{ needs.set-state.outputs.base_Sha }}
 
-      - name: Get all files src/pages and static folder
+      - name: Get all files from src/pages folder
         if: needs.set-state.outputs.deploy_All == 'true'
         id: all-files
         uses: actions/github-script@v7
         with:
           script: |
-            const patterns = ['src/pages/**/*.*','static/**/*.*'];
+            const patterns = ['src/pages/**/*.*'];
             const globberSrcFiles = await glob.create(patterns[0]);
-            const globberStaticFiles = await glob.create(patterns[1]);
-
             const srcFiles = await globberSrcFiles.glob();
-            const staticFiles = await globberStaticFiles.glob();
 
             const srcFilesFixedPaths = [];
             srcFiles.forEach((path) => {
@@ -112,15 +108,7 @@ jobs:
               }
             });
 
-            const staticFilesPaths = [];
-            staticFiles.forEach((path) => {
-              let pathSplitter = path.split(`${{ github.event.repository.name }}/static`);
-              if(pathSplitter.length > 1){
-                  staticFilesPaths.push(`static${pathSplitter[1]}`)
-              }
-            });
-
-            const serializedAllFiles = JSON.stringify(srcFilesFixedPaths.concat(staticFilesPaths));
+            const serializedAllFiles = JSON.stringify(srcFilesFixedPaths);
             core.setOutput('all_files', serializedAllFiles);
 
       - name: Deploy only changed files to stage

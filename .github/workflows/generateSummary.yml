@@ -27,6 +27,9 @@ jobs:
       deploy_All: ${{ github.event.inputs.deployAll }}
       generate_AI_Summary: ${{ github.event.inputs.generateAISummary }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Checkout Scripts Repo
         uses: actions/checkout@v4
         with:

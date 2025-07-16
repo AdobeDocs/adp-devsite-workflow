@@ -79,7 +79,7 @@ jobs:
         with:
           repository: AdobeDocs/adp-devsite-scripts
           path: scripts
-          ref: main
+          ref: ai
        
       - name: Get changed files in the src/pages folder
         if: needs.set-state.outputs.deploy_All == 'false'

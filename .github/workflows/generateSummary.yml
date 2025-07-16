@@ -12,7 +12,7 @@ on:
       deployAll:
         type: boolean
         default: false
-      generateAISummary:
+      generateSummary:
         type: boolean
         default: true
 jobs:
@@ -114,7 +114,7 @@ jobs:
             core.setOutput('all_files', serializedAllFiles);
 
       - name: Generate AI summary on all files on stage
-        if: needs.set-state.outputs.generateAISummary == 'true' && needs.set-state.outputs.deploy_All == 'true' && needs.set-state.outputs.deploy_stage == 'true'
+        if: needs.set-state.outputs.generateSummary == 'true' && needs.set-state.outputs.deploy_All == 'true' && needs.set-state.outputs.deploy_stage == 'true'
         id: summary
         uses: actions/github-script@v7
         env: ADP_CHATGPT_API_KEY: ${{ secrets.ADP_CHATGPT_API_KEY }}

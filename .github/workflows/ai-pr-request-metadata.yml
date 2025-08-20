@@ -55,12 +55,9 @@ jobs:
           node-version: '18'
           
       - name: Enable Corepack for Yarn v3
-        run: corepack enable
-        
-      - name: Install Yarn v3
-        uses: borales/actions-yarn@v3
-        with:
-          cmd: set version stable
+        run: |
+          corepack enable
+          corepack prepare yarn@3.2.1 --activate
 
       - name: Get yarn cache directory path
         id: yarn-cache-dir-path

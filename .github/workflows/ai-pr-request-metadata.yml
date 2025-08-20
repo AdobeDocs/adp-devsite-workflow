@@ -30,8 +30,6 @@ on:
         required: true
       AZURE_OPENAI_API_KEY:
         required: true
-      GITHUB_TOKEN:
-        required: true
   pull_request:
     branches: [main]
     paths:
@@ -100,7 +98,7 @@ jobs:
             await script({
               core,
               prId: "${{ inputs.PR_ID || github.event.pull_request.number }}",
-              githubToken: "${{ secrets.GITHUB_TOKEN }}",
+              githubToken: "${{ github.token }}",
               owner: "${{ github.event.repository.owner.login }}",
               repo: "${{ github.event.repository.name }}"
             });
@@ -126,7 +124,7 @@ jobs:
             
             await script({
               core,
-              githubToken: "${{ secrets.GITHUB_TOKEN }}",
+              githubToken: "${{ github.token }}",
               prId: "${{ inputs.PR_ID || github.event.pull_request.number }}",
               owner: "${{ github.event.repository.owner.login }}",
               repo: "${{ github.event.repository.name }}"

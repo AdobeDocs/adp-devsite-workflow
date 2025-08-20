@@ -1,0 +1,133 @@
+---
+###########################
+###########################
+## Pull request testing ##
+###########################
+###########################
+name: Generate Metadata for Latest Pull Request
+
+# Documentation:
+# - Workflow: https://help.github.com/en/articles/workflow-syntax-for-github-actions
+# - SuperLinter: https://github.com/github/super-linter
+# - Markdown linter: https://github.com/DavidAnson/markdownlint
+# - Link validation: https://github.com/remarkjs/remark-validate-links
+
+######################################################
+# Start the job on a pull request to the main branch #
+######################################################
+on:
+  workflow_call:
+    inputs:
+      PR_ID:
+        required: true
+        type: string
+      FILE_NAME:
+        required: false
+        type: string
+        default: "pr_content.txt"
+    secrets:
+      AZURE_OPENAI_ENDPOINT:
+        required: true
+      AZURE_OPENAI_API_KEY:
+        required: true
+      GITHUB_TOKEN:
+        required: true
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/pages/**'
+
+###############
+# Set the Job #
+###############
+jobs:
+
+  ai-summary:
+    name: AI Summary on Changed Content
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          
+      - name: Enable Corepack for Yarn v3
+        run: corepack enable
+        
+      - name: Install Yarn v3
+        uses: borales/actions-yarn@v3
+        with:
+          cmd: set version stable
+
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "dir=$(yarn config get cacheFolder)" >> $GITHUB_OUTPUT
+
+      - name: Cache yarn dependencies
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - name: Checkout Scripts Repo
+        uses: actions/checkout@v4
+        with:
+          repository: AdobeDocs/adp-devsite-scripts
+          path: scripts
+          ref: main
+
+      - name: Install dependencies and run script
+        uses: borales/actions-yarn@v3
+        env:
+          YARN_ENABLE_IMMUTABLE_INSTALLS: false
+          YARN_ENABLE_HARDENED_MODE: false
+        with:
+          cmd: install --mode=update-lockfile
+          
+      - name: Run PR script
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const script = require('./scripts/pr-scripts.js');
+            
+            await script({
+              core,
+              prId: "${{ inputs.PR_ID || github.event.pull_request.number }}",
+              githubToken: "${{ secrets.GITHUB_TOKEN }}",
+              owner: "${{ github.event.repository.owner.login }}",
+              repo: "${{ github.event.repository.name }}"
+            });
+          
+      - name: Run AI metadata generation script
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const script = require('./scripts/ai-scripts.js');
+            
+            await script({
+              core,
+              azureOpenAIEndpoint: "${{ secrets.AZURE_OPENAI_ENDPOINT }}",
+              azureOpenAIAPIKey: "${{ secrets.AZURE_OPENAI_API_KEY }}",
+              fileName: "${{ inputs.FILE_NAME || 'pr_content.txt' }}"
+            });
+          
+      - name: Run review PR script
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const script = require('./scripts/review-scripts.js');
+            
+            await script({
+              core,
+              githubToken: "${{ secrets.GITHUB_TOKEN }}",
+              prId: "${{ inputs.PR_ID || github.event.pull_request.number }}",
+              owner: "${{ github.event.repository.owner.login }}",
+              repo: "${{ github.event.repository.name }}"
+            });

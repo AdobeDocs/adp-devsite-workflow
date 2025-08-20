@@ -80,9 +80,6 @@ jobs:
 
       - name: Install dependencies and run script
         run: yarn install --mode=update-lockfile
-        env:
-          YARN_ENABLE_IMMUTABLE_INSTALLS: false
-          YARN_ENABLE_HARDENED_MODE: false
           
       - name: Run PR script
         uses: actions/github-script@v7

@@ -81,7 +81,7 @@ jobs:
         with:
           repository: AdobeDocs/adp-devsite-scripts
           path: scripts
-          ref: main
+          ref: ai-metadata
 
       - name: Install dependencies and run script
         uses: borales/actions-yarn@v3

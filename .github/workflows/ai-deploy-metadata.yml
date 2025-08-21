@@ -1,6 +1,17 @@
 ---
 name: Generate Metadata for all files
 on:
+  workflow_call:
+    inputs:
+      FILE_NAME:
+        required: false
+        type: string
+        default: "all_pages_content.txt"
+    secrets:
+      AZURE_OPENAI_ENDPOINT:
+        required: true
+      AZURE_OPENAI_API_KEY:
+        required: true
   workflow_dispatch:
     inputs:
       env:
@@ -22,16 +33,8 @@ on:
         type: boolean
         default: false
 jobs:
-  deployment:
-    name: Deployment
-    uses: AdobeDocs/adp-devsite-workflow/.github/workflows/deploy.yml@main
-    with:
-      env: ${{ inputs.env }}
-      baseSha: ${{ inputs.baseSha }}
-      deployAll: ${{ inputs.deployAll }}
-   
   ai-metadata-update:
-    name: AI Metadata Update
+    name: AI Metadata Update on Deployment in Workflow
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -45,12 +48,9 @@ jobs:
           node-version: '18'
           
       - name: Enable Corepack for Yarn v3
-        run: corepack enable
-        
-      - name: Install Yarn v3
-        uses: borales/actions-yarn@v3
-        with:
-          cmd: set version stable
+        run: |
+          corepack enable
+          corepack prepare yarn@3.2.1 --activate
 
       - name: Get yarn cache directory path
         id: yarn-cache-dir-path
@@ -64,27 +64,51 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-yarn-
 
-      - name: Install dependencies and run script
-        uses: borales/actions-yarn@v3
-        env:
-          YARN_ENABLE_IMMUTABLE_INSTALLS: false
-          YARN_ENABLE_HARDENED_MODE: false
+      - name: Checkout Scripts Repo
+        uses: actions/checkout@v4
         with:
-          cmd: install --mode=update-lockfile
+          repository: AdobeDocs/adp-devsite-scripts
+          path: scripts
+          ref: ai-metadata
+
+      - name: Install dependencies and run script
+        run: yarn install --mode=update-lockfile
           
       - name: Fetch all pages content
-        run: node src/fetch-pages-scripts.js
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const script = require('./scripts/fetch-pages-scripts.js');
+            
+            await script({
+              core,
+              githubToken: "${{ github.token }}",
+              owner: "${{ github.event.repository.owner.login }}",
+              repo: "${{ github.event.repository.name }}"
+            });
           
       - name: Run AI metadata generation script
-        run: node src/ai-scripts.js
-        env:
-          AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
-          AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
-          FILE_NAME: "all_pages_content.txt"
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const script = require('./scripts/ai-scripts.js');
+            
+            await script({
+              core,
+              azureOpenAIEndpoint: "${{ secrets.AZURE_OPENAI_ENDPOINT }}",
+              azureOpenAIAPIKey: "${{ secrets.AZURE_OPENAI_API_KEY }}",
+              fileName: "${{ inputs.FILE_NAME || 'all_pages_content.txt' }}"
+            });
           
       - name: Push Commit and Create PR
-        run: node src/create-pr-scripts.js
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const script = require('./scripts/create-pr-scripts.js');
+            
+            await script({
+              core,
+              githubToken: "${{ github.token }}",
+              owner: "${{ github.event.repository.owner.login }}",
+              repo: "${{ github.event.repository.name }}"
+            });

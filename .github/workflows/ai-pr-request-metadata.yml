@@ -80,6 +80,11 @@ jobs:
 
       - name: Install dependencies and run script
         run: yarn install --mode=update-lockfile
+        
+      - name: Install scripts dependencies
+        run: |
+          cd scripts
+          npm install
           
       - name: Run PR script
         uses: actions/github-script@v7

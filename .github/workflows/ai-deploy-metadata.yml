@@ -73,6 +73,11 @@ jobs:
 
       - name: Install dependencies and run script
         run: yarn install --mode=update-lockfile
+        
+      - name: Install scripts dependencies
+        run: |
+          cd scripts
+          npm install
           
       - name: Fetch all pages content
         uses: actions/github-script@v7

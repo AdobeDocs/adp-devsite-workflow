@@ -80,15 +80,6 @@ jobs:
         run: |
           cd scripts
           npm install
-
-      - name: Validate Links and Navigation (Warning Only)
-        continue-on-error: true
-        run: |
-          echo "🔗 Validating links and navigation..."
-          yarn buildNavigation || echo "Warning: Navigation build failed"
-          yarn normalizeLinks || echo "Warning: Link normalization failed"
-          yarn checkLinks || echo "Warning: Link validation found issues"
-          echo "Link validation completed (warnings only)"
           
       - name: Run PR script
         uses: actions/github-script@v7

@@ -71,7 +71,7 @@ jobs:
         with:
           repository: AdobeDocs/adp-devsite-scripts
           path: scripts
-          ref: app-builder-test
+          ref: test-nightly-refresh
 
       - name: Install dependencies and run script
         run: yarn install --mode=update-lockfile

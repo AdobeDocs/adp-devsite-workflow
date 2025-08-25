@@ -119,14 +119,14 @@ jobs:
             src/pages/**
           base_sha: ${{ needs.set-state.outputs.base_Sha }}
 
-      - name: Process changed files and generate AI metadata
+      - name: Fetch content for changed files
         uses: actions/github-script@v7
         with:
           script: |
             const script = require('./scripts/process-changed-files-scripts.js');
             
             const changedFiles = ${{ steps.changed-files-for-processing.outputs.all_changed_files }};
-            console.log(`Processing ${changedFiles.length} changed files:`, changedFiles);
+            console.log(`Fetching content for ${changedFiles.length} changed files:`, changedFiles);
             
             await script({
               core,
@@ -134,8 +134,32 @@ jobs:
               owner: "${{ github.event.repository.owner.login }}",
               repo: "${{ github.event.repository.name }}",
               changedFiles: changedFiles,
-              targetBranch: "${{ needs.set-state.outputs.target_branch }}",
+              fileName: "${{ inputs.FILE_NAME }}"
+            });
+
+      - name: Run AI metadata generation script
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const script = require('./scripts/ai-scripts.js');
+            
+            await script({
+              core,
               azureOpenAIEndpoint: "${{ secrets.AZURE_OPENAI_ENDPOINT }}",
               azureOpenAIAPIKey: "${{ secrets.AZURE_OPENAI_API_KEY }}",
               fileName: "${{ inputs.FILE_NAME }}"
+            });
+
+      - name: Create PR with generated metadata
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const script = require('./scripts/create-pr-scripts.js');
+            
+            await script({
+              core,
+              githubToken: "${{ github.token }}",
+              owner: "${{ github.event.repository.owner.login }}",
+              repo: "${{ github.event.repository.name }}",
+              targetBranch: "${{ needs.set-state.outputs.target_branch }}"
             });

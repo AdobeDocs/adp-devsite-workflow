@@ -12,6 +12,10 @@ on:
         required: false
         type: string
         default: "all_pages_content.txt"
+      TARGET_BRANCH:
+        required: false
+        type: string
+        default: "hackathon-test"
     secrets:
       AZURE_OPENAI_ENDPOINT:
         required: true
@@ -80,7 +84,7 @@ jobs:
         with:
           repository: AdobeDocs/adp-devsite-scripts
           path: scripts
-          ref: ai-metadata
+          ref: app-builder-test
 
       - name: Install dependencies and run script
         run: yarn install --mode=update-lockfile
@@ -126,5 +130,6 @@ jobs:
               core,
               githubToken: "${{ github.token }}",
               owner: "${{ github.event.repository.owner.login }}",
-              repo: "${{ github.event.repository.name }}"
+              repo: "${{ github.event.repository.name }}",
+              targetBranch: "${{ inputs.TARGET_BRANCH || 'hackathon-test' }}"
             });

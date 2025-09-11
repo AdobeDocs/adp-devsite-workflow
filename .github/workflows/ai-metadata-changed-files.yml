@@ -14,6 +14,10 @@ on:
         type: string
         required: false
         default: "main"
+      FOLDER_PATH:
+        required: false
+        type: string
+        default: "src/pages"
     secrets:
       AZURE_OPENAI_ENDPOINT:
         required: true
@@ -40,14 +44,14 @@ jobs:
         run: echo "branch=${GITHUB_REF#refs/heads/}" >> "$GITHUB_OUTPUT"
         id: get_branch
 
-      - name: Get changed files in the src/pages folder
+      - name: Get changed files in the specified folder
         id: changed-files-specific
         uses: tj-actions/changed-files@v46.0.5
         with:
           json: true
           escape_json: false
           files: |
-            src/pages/**
+            ${{ inputs.FOLDER_PATH || 'src/pages' }}/**
           base_sha: ${{ inputs.baseSha }}
 
   echo-state:
@@ -109,14 +113,14 @@ jobs:
           cd scripts
           npm install
 
-      - name: Get changed files in src/pages folder for processing
+      - name: Get changed files in specified folder for processing
         id: changed-files-for-processing
         uses: tj-actions/changed-files@v46.0.5
         with:
           json: true
           escape_json: false
           files: |
-            src/pages/**
+            ${{ inputs.FOLDER_PATH || 'src/pages' }}/**
           base_sha: ${{ needs.set-state.outputs.base_Sha }}
 
       - name: Fetch content for changed files
@@ -134,7 +138,8 @@ jobs:
               owner: "${{ github.event.repository.owner.login }}",
               repo: "${{ github.event.repository.name }}",
               changedFiles: changedFiles,
-              fileName: "${{ inputs.FILE_NAME }}"
+              fileName: "${{ inputs.FILE_NAME }}",
+              folderPath: "${{ inputs.FOLDER_PATH || 'src/pages' }}"
             });
 
       - name: Run AI metadata generation script

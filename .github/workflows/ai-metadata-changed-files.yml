@@ -103,7 +103,7 @@ jobs:
         with:
           repository: AdobeDocs/adp-devsite-scripts
           path: scripts
-          ref: test-nightly-refresh
+          ref: main
 
       - name: Install dependencies
         run: yarn install --mode=update-lockfile

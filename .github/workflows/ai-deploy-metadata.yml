@@ -12,6 +12,14 @@ on:
         required: false
         type: string
         default: "all_pages_content.txt"
+      TARGET_BRANCH:
+        required: false
+        type: string
+        default: "main"
+      FOLDER_PATH:
+        required: false
+        type: string
+        default: "src/pages"
     secrets:
       AZURE_OPENAI_ENDPOINT:
         required: true
@@ -80,7 +88,7 @@ jobs:
         with:
           repository: AdobeDocs/adp-devsite-scripts
           path: scripts
-          ref: ai-metadata
+          ref: main
 
       - name: Install dependencies and run script
         run: yarn install --mode=update-lockfile
@@ -100,7 +108,8 @@ jobs:
               core,
               githubToken: "${{ github.token }}",
               owner: "${{ github.event.repository.owner.login }}",
-              repo: "${{ github.event.repository.name }}"
+              repo: "${{ github.event.repository.name }}",
+              folderPath: "${{ inputs.FOLDER_PATH || 'src/pages' }}"
             });
           
       - name: Run AI metadata generation script
@@ -126,5 +135,6 @@ jobs:
               core,
               githubToken: "${{ github.token }}",
               owner: "${{ github.event.repository.owner.login }}",
-              repo: "${{ github.event.repository.name }}"
+              repo: "${{ github.event.repository.name }}",
+              targetBranch: "${{ inputs.TARGET_BRANCH || 'main' }}"
             });

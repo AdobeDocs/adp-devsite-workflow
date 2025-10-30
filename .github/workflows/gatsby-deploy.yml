@@ -108,7 +108,7 @@ jobs:
         run: corepack enable
 
       - name: Install Dependencies
-          run: yarn install
+        run: yarn install
 
       - name: Gatsby Cache
         uses: actions/cache@v3

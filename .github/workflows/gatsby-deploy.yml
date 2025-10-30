@@ -50,14 +50,6 @@ jobs:
             script({ core });
           result-encoding: string
 
-      - name: Get pathPrefix
-        uses: actions/github-script@v6
-        id: get_path_prefix
-        with:
-          script: |
-            const script = require('./.github/scripts/get-path-prefix.js');
-            script({ core });
-          result-encoding: string
       - name: Get branch name
         shell: bash
         run: echo "branch=${GITHUB_REF#refs/heads/}" >> "$GITHUB_OUTPUT"

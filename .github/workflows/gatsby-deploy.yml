@@ -19,6 +19,30 @@ on:
         type: string
         required: true
         default: "index"
+      NODE_OPTIONS:
+        type: string
+        required: false
+        default: ""
+      DESKTOP_SCREEN_WIDTH:
+        type: string
+        required: false
+        default: ""
+      DESKTOP_FOOTER_SCREEN_WIDTH_MAX:
+        type: string
+        required: false
+        default: ""
+      TEMPLATE_ID_DEV:
+        type: string
+        required: false
+        default: ""
+      TEMPLATE_ID_PROD:
+        type: string
+        required: false
+        default: ""
+      DC_LINKED_IN:
+        type: string
+        required: false
+        default: ""
 
 jobs:
   set-state:
@@ -144,6 +168,12 @@ jobs:
           GATSBY_FEDS_PRIVACY_ID: ${{ secrets.AIO_FEDS_PRIVACY_ID }}
           GATSBY_SITE_DOMAIN_URL: https://developer-stage.adobe.com
           GATSBY_REDOCLY_KEY: ${{ secrets.REDOCLY_LICENSE_KEY }}
+          ${{ inputs.NODE_OPTIONS != '' && format('NODE_OPTIONS={0}', inputs.NODE_OPTIONS) || '' }}
+          ${{ inputs.DESKTOP_SCREEN_WIDTH != '' && format('GATSBY_DESKTOP_SCREEN_WIDTH={0}', inputs.DESKTOP_SCREEN_WIDTH) || '' }}
+          ${{ inputs.DESKTOP_FOOTER_SCREEN_WIDTH_MAX != '' && format('GATSBY_DESKTOP_FOOTER_SCREEN_WIDTH_MAX={0}', inputs.DESKTOP_FOOTER_SCREEN_WIDTH_MAX) || '' }}
+          ${{ inputs.TEMPLATE_ID_DEV != '' && format('GATSBY_TEMPLATE_ID={0}', inputs.TEMPLATE_ID_DEV) || '' }}
+          ${{ inputs.DC_LINKED_IN != '' && format('GATSBY_DC_LINKED_IN={0}', inputs.DC_LINKED_IN) || '' }}
+
       - name: Deploy
         uses: AdobeDocs/static-website-deploy@master
         with:
@@ -238,6 +268,11 @@ jobs:
           GATSBY_FEDS_PRIVACY_ID: ${{ secrets.AIO_FEDS_PRIVACY_ID }}
           GATSBY_SITE_DOMAIN_URL: https://developer.adobe.com
           GATSBY_REDOCLY_KEY: ${{ secrets.REDOCLY_LICENSE_KEY }}
+          ${{ inputs.NODE_OPTIONS != '' && format('NODE_OPTIONS={0}', inputs.NODE_OPTIONS) || '' }}
+          ${{ inputs.DESKTOP_SCREEN_WIDTH != '' && format('GATSBY_DESKTOP_SCREEN_WIDTH={0}', inputs.DESKTOP_SCREEN_WIDTH) || '' }}
+          ${{ inputs.DESKTOP_FOOTER_SCREEN_WIDTH_MAX != '' && format('GATSBY_DESKTOP_FOOTER_SCREEN_WIDTH_MAX={0}', inputs.DESKTOP_FOOTER_SCREEN_WIDTH_MAX) || '' }}
+          ${{ inputs.TEMPLATE_ID_PROD != '' && format('GATSBY_TEMPLATE_ID={0}', inputs.TEMPLATE_ID_PROD) || '' }}
+          ${{ inputs.DC_LINKED_IN != '' && format('GATSBY_DC_LINKED_IN={0}', inputs.DC_LINKED_IN) || '' }}
 
       - name: Deploy
         uses: AdobeDocs/static-website-deploy@master

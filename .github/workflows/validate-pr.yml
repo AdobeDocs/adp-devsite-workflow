@@ -11,7 +11,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Markdown lint
-        run: npx --yes markdownlint-cli2 'src/pages/**/*.md' '*.md'
+        run: npx --yes github:AdobeDocs/adp-devsite-utils runLint -v
 
   remark-lint:
     needs: markdown-lint

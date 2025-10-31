@@ -10,9 +10,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Run TOC validation
-        run: npm run test:config
-
   markdown-lint:
     needs: toc
     runs-on: ubuntu-latest

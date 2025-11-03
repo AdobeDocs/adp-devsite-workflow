@@ -31,6 +31,10 @@ on:
         type: string
         required: false
         default: ""
+      PRODUCT_NAME:
+        type: string
+        required: false
+        default: ""
       TEMPLATE_ID_DEV:
         type: string
         required: false
@@ -170,6 +174,7 @@ jobs:
           GATSBY_REDOCLY_KEY: ${{ secrets.REDOCLY_LICENSE_KEY }}
           GATSBY_DESKTOP_SCREEN_WIDTH: ${{ inputs.DESKTOP_SCREEN_WIDTH }}
           GATSBY_DESKTOP_FOOTER_SCREEN_WIDTH_MAX: ${{ inputs.DESKTOP_FOOTER_SCREEN_WIDTH_MAX }}
+          GATSBY_PRODUCT_NAME: ${{ inputs.PRODUCT_NAME }}
           GATSBY_TEMPLATE_ID: ${{ inputs.TEMPLATE_ID_DEV }}
           GATSBY_DC_LINKED_IN: ${{ inputs.DC_LINKED_IN }}
           NODE_OPTIONS: ${{ inputs.NODE_OPTIONS }}
@@ -270,6 +275,7 @@ jobs:
           GATSBY_REDOCLY_KEY: ${{ secrets.REDOCLY_LICENSE_KEY }}
           GATSBY_DESKTOP_SCREEN_WIDTH: ${{ inputs.DESKTOP_SCREEN_WIDTH }}
           GATSBY_DESKTOP_FOOTER_SCREEN_WIDTH_MAX: ${{ inputs.DESKTOP_FOOTER_SCREEN_WIDTH_MAX }}
+          GATSBY_PRODUCT_NAME: ${{ inputs.PRODUCT_NAME }}
           GATSBY_TEMPLATE_ID: ${{ inputs.TEMPLATE_ID_PROD }}
           GATSBY_DC_LINKED_IN: ${{ inputs.DC_LINKED_IN }}
           NODE_OPTIONS: ${{ inputs.NODE_OPTIONS }}

@@ -90,7 +90,7 @@ jobs:
           ls -F "$TARGET_DIR"
           echo ""
           echo "Listing sizes of subdirectories in the current directory (human-readable):"
-          du -h --max-depth=1 . | sort -rh
+          du -h --max-depth=1 "$TARGET_DIR" | sort -rh
           echo ""
 
   echo-state:

@@ -142,6 +142,16 @@ jobs:
       - name: Install Dependencies
         run: yarn install
 
+      - name: List contents and subdirectory sizes
+        run: |
+          echo "Listing contents of the current directory:"
+          TARGET_DIR="/"
+          ls -F "$TARGET_DIR"
+          echo ""
+          echo "Listing sizes of subdirectories in the current directory (human-readable):"
+          du -h --max-depth=3 . | sort -rh
+          echo ""
+
       - name: Gatsby Cache
         uses: actions/cache@v3
         with:

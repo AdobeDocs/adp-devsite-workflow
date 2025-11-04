@@ -87,13 +87,16 @@ jobs:
         run: echo "branch=${GITHUB_REF#refs/heads/}" >> "$GITHUB_OUTPUT"
         id: get_branch
 
-      - name: Delete unused cached tools
-        run: |
-          sudo rm -rf /opt/hostedtoolcache/Python
-          sudo rm -rf /opt/hostedtoolcache/CodeQL
-          sudo rm -rf /opt/hostedtoolcache/go
-          sudo rm -rf /opt/hostedtoolcache/Ruby
-          sudo rm -rf /opt/hostedtoolcache/PyPy
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
 
   echo-state:
     needs: [set-state]
@@ -141,16 +144,6 @@ jobs:
 
       - name: Install Dependencies
         run: yarn install
-
-      - name: List contents and subdirectory sizes
-        run: |
-          echo "Listing contents of the current directory:"
-          TARGET_DIR="/"
-          ls -F "$TARGET_DIR"
-          echo ""
-          echo "Listing sizes of subdirectories in the current directory (human-readable):"
-          du -h --max-depth=1 "$TARGET_DIR" | sort -rh
-          echo ""
 
       - name: Gatsby Cache
         uses: actions/cache@v3

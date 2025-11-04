@@ -83,15 +83,13 @@ jobs:
         run: echo "branch=${GITHUB_REF#refs/heads/}" >> "$GITHUB_OUTPUT"
         id: get_branch
 
-      - name: List contents and subdirectory sizes
+      - name: Delete unused cached tools
         run: |
-          echo "Listing contents of the current directory:"
-          TARGET_DIR="/opt/hostedtoolcache"
-          ls -F "$TARGET_DIR"
-          echo ""
-          echo "Listing sizes of subdirectories in the current directory (human-readable):"
-          du -h --max-depth=1 "$TARGET_DIR" | sort -rh
-          echo ""
+          sudo rm -rf /opt/hostedtoolcache/Python
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /opt/hostedtoolcache/go
+          sudo rm -rf /opt/hostedtoolcache/Ruby
+          sudo rm -rf /opt/hostedtoolcache/PyPy
 
   echo-state:
     needs: [set-state]

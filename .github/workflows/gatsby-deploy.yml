@@ -47,6 +47,10 @@ on:
         type: string
         required: false
         default: ""
+      CPU_COUNT:
+        type: string
+        required: false
+        default: "2"
 
 jobs:
   set-state:
@@ -186,6 +190,7 @@ jobs:
           GATSBY_TEMPLATE_ID: ${{ inputs.TEMPLATE_ID_DEV }}
           GATSBY_DC_LINKED_IN: ${{ inputs.DC_LINKED_IN }}
           NODE_OPTIONS: ${{ inputs.NODE_OPTIONS }}
+          CPU_COUNT: ${{ inputs.CPU_COUNT }}
 
       - name: Deploy
         uses: AdobeDocs/static-website-deploy@master
@@ -287,7 +292,7 @@ jobs:
           GATSBY_TEMPLATE_ID: ${{ inputs.TEMPLATE_ID_PROD }}
           GATSBY_DC_LINKED_IN: ${{ inputs.DC_LINKED_IN }}
           NODE_OPTIONS: ${{ inputs.NODE_OPTIONS }}
-
+          CPU_COUNT: ${{ inputs.CPU_COUNT }}
       - name: Deploy
         uses: AdobeDocs/static-website-deploy@master
         with:

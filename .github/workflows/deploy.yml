@@ -14,7 +14,18 @@ on:
         default: false
 
 jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Lint
+        run: npx --yes github:AdobeDocs/adp-devsite-utils runLint -v
+
   set-state:
+    needS: [lint]
     runs-on: ubuntu-latest
     outputs:
       path_prefix: ${{ steps.get_path_prefix.outputs.path_prefix }}
@@ -27,7 +38,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-  
+
       - name: Checkout Scripts Repo
         uses: actions/checkout@v4
         with:

@@ -25,7 +25,7 @@ jobs:
         run: npx --yes github:AdobeDocs/adp-devsite-utils runLint -v
 
   set-state:
-    needS: [lint]
+    needs: [lint]
     runs-on: ubuntu-latest
     outputs:
       path_prefix: ${{ steps.get_path_prefix.outputs.path_prefix }}

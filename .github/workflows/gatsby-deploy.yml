@@ -63,6 +63,7 @@ jobs:
       deploy_prod: ${{ contains(inputs.env, 'prod') }}
       deploy_dev: ${{ contains(inputs.env, 'dev') }}
       clean_cache: ${{ inputs.clean }}
+      clean_disk_space: ${{ inputs.clean-disk-space }}
       path_prefix: ${{ steps.get_path_prefix.outputs.path_prefix }}
       branch_short_ref: ${{ steps.get_branch.outputs.branch }}
       exclude_subfolder: ${{ inputs.excludeSubfolder }}

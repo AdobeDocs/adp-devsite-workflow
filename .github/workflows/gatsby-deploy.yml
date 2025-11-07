@@ -19,6 +19,10 @@ on:
         type: string
         required: true
         default: "index"
+      clean-disk-space:
+        type: boolean
+        required: false
+        default: false
       NODE_OPTIONS:
         type: string
         required: false
@@ -149,6 +153,7 @@ jobs:
         run: yarn clean
 
       - name: Free Disk Space (Ubuntu)
+        if: needs.set-state.outputs.clean_disk_space == 'true'
         uses: jlumbroso/free-disk-space@main
         with:
           tool-cache: false
@@ -257,6 +262,18 @@ jobs:
       - name: Clean Cache
         if: needs.set-state.outputs.clean_cache == 'true'
         run: yarn clean
+
+      - name: Free Disk Space (Ubuntu)
+        if: needs.set-state.outputs.clean_disk_space == 'true'
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
 
       - name: Build site
         run: yarn build

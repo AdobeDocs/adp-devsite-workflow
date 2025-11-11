@@ -55,6 +55,34 @@ on:
         type: string
         required: false
         default: "2"
+      IMS_BASE_URL:
+        type: string
+        required: false
+        default: ""
+      FFC_BASE_URL:
+        type: string
+        required: false
+        default: ""
+      GATSBY_EXPRESS_URL:
+        type: string
+        required: false
+        default: ""
+      PLAYGROUND_CLIENT_ID:
+        type: string
+        required: false
+        default: ""
+      PLAYGROUND_CLIENT_SECRET:
+        type: string
+        required: false
+        default: ""
+      PLAYGROUND_AUTH_CODE:
+        type: string
+        required: false
+        default: ""
+      PLAYGROUND_API_KEY:
+        type: string
+        required: false
+        default: ""
 
 jobs:
   set-state:
@@ -200,6 +228,13 @@ jobs:
           GATSBY_DC_LINKED_IN: ${{ inputs.DC_LINKED_IN }}
           NODE_OPTIONS: ${{ inputs.NODE_OPTIONS }}
           CPU_COUNT: ${{ inputs.CPU_COUNT }}
+          IMS_BASE_URL: ${{ inputs.IMS_BASE_URL }}
+          FFC_BASE_URL: ${{ inputs.FFC_BASE_URL }}
+          GATSBY_EXPRESS_URL: ${{ inputs.GATSBY_EXPRESS_URL }}
+          PLAYGROUND_CLIENT_ID: ${{ inputs.PLAYGROUND_CLIENT_ID }}
+          PLAYGROUND_CLIENT_SECRET: ${{ inputs.PLAYGROUND_CLIENT_SECRET }}
+          PLAYGROUND_AUTH_CODE: ${{ inputs.PLAYGROUND_AUTH_CODE }}
+          PLAYGROUND_API_KEY: ${{ inputs.PLAYGROUND_API_KEY }}
 
       - name: Deploy
         uses: AdobeDocs/static-website-deploy@master
@@ -314,6 +349,14 @@ jobs:
           GATSBY_DC_LINKED_IN: ${{ inputs.DC_LINKED_IN }}
           NODE_OPTIONS: ${{ inputs.NODE_OPTIONS }}
           CPU_COUNT: ${{ inputs.CPU_COUNT }}
+          IMS_BASE_URL: ${{ inputs.IMS_BASE_URL }}
+          FFC_BASE_URL: ${{ inputs.FFC_BASE_URL }}
+          GATSBY_EXPRESS_URL: ${{ inputs.GATSBY_EXPRESS_URL }}
+          PLAYGROUND_CLIENT_ID: ${{ inputs.PLAYGROUND_CLIENT_ID }}
+          PLAYGROUND_CLIENT_SECRET: ${{ inputs.PLAYGROUND_CLIENT_SECRET }}
+          PLAYGROUND_AUTH_CODE: ${{ inputs.PLAYGROUND_AUTH_CODE }}
+          PLAYGROUND_API_KEY: ${{ inputs.PLAYGROUND_API_KEY }}
+
       - name: Deploy
         uses: AdobeDocs/static-website-deploy@master
         with:

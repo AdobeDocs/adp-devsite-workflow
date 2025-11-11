@@ -83,7 +83,7 @@ jobs:
         id: last_successful_commit_push
         with:
           main-branch-name: ${{ steps.get_branch.outputs.branch }} # Get the last successful commit for the current branch.
-          workflow-id: ${{ needs.set-state.outputs.deploy_prod == 'true' && 'deploy.yml' || 'staging.yml' }}
+          workflow-id: ${{ needs.set-state.outputs.deploy_prod == 'true' && 'deploy.yml' || 'stage.yml' }}
 
       - name: Get changed files in the src/pages folder
         if: needs.set-state.outputs.deploy_All == 'false'

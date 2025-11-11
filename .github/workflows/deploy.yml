@@ -79,15 +79,11 @@ jobs:
           path: scripts
           ref: main
 
-      - name: Get branch name
-        id: branch-name
-        uses: tj-actions/branch-names@v6
-
       - uses: nrwl/nx-set-shas@v3
         id: last_successful_commit_push
         with:
-          main-branch-name: ${{ steps.branch-name.outputs.current_branch }} # Get the last successful commit for the current branch.
-          workflow-id: 'deploy.yml'
+          main-branch-name: ${{ steps.get_branch.outputs.branch }} # Get the last successful commit for the current branch.
+          workflow-id: ${{ needs.set-state.outputs.deploy_prod == 'true' && 'deploy.yml' || 'staging.yml' }}
 
       - name: Get changed files in the src/pages folder
         if: needs.set-state.outputs.deploy_All == 'false'

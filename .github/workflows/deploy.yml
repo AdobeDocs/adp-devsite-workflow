@@ -21,8 +21,8 @@ jobs:
       branch_short_ref: ${{ steps.get_branch.outputs.branch }}
       deploy_stage: ${{ contains(inputs.env, 'stage') }}
       deploy_prod: ${{ contains(inputs.env, 'prod') }}
-      base_Sha: ${{ github.event.inputs.baseSha }}
-      deploy_All: ${{ github.event.inputs.deployAll }}
+      base_Sha: ${{ inputs.baseSha }}
+      deploy_All: ${{ inputs.deployAll }}
 
     steps:
       - name: Checkout

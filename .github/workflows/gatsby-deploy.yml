@@ -55,15 +55,27 @@ on:
         type: string
         required: false
         default: "2"
-      IMS_BASE_URL:
+      IMS_BASE_URL_STAGE:
         type: string
         required: false
         default: ""
-      FFC_BASE_URL:
+      FFC_BASE_URL_STAGE:
         type: string
         required: false
         default: ""
-      GATSBY_EXPRESS_URL:
+      GATSBY_EXPRESS_URL_STAGE:
+        type: string
+        required: false
+        default: ""
+      IMS_BASE_URL_PROD:
+        type: string
+        required: false
+        default: ""
+      FFC_BASE_URL_PROD:
+        type: string
+        required: false
+        default: ""
+      GATSBY_EXPRESS_URL_PROD:
         type: string
         required: false
         default: ""
@@ -212,9 +224,9 @@ jobs:
           GATSBY_DC_LINKED_IN: ${{ inputs.DC_LINKED_IN }}
           NODE_OPTIONS: ${{ inputs.NODE_OPTIONS }}
           CPU_COUNT: ${{ inputs.CPU_COUNT }}
-          IMS_BASE_URL: ${{ inputs.IMS_BASE_URL }}
-          FFC_BASE_URL: ${{ inputs.FFC_BASE_URL }}
-          GATSBY_EXPRESS_URL: ${{ secrets.GATSBY_EXPRESS_URL }}
+          IMS_BASE_URL: ${{ inputs.IMS_BASE_URL_STAGE }}
+          FFC_BASE_URL: ${{ inputs.FFC_BASE_URL_STAGE }}
+          GATSBY_EXPRESS_URL: ${{ secrets.GATSBY_EXPRESS_URL_STAGE }}
           PLAYGROUND_CLIENT_ID: ${{ secrets.PLAYGROUND_CLIENT_ID }}
           PLAYGROUND_CLIENT_SECRET: ${{ secrets.PLAYGROUND_CLIENT_SECRET }}
           PLAYGROUND_AUTH_CODE: ${{ secrets.PLAYGROUND_AUTH_CODE }}
@@ -333,9 +345,9 @@ jobs:
           GATSBY_DC_LINKED_IN: ${{ inputs.DC_LINKED_IN }}
           NODE_OPTIONS: ${{ inputs.NODE_OPTIONS }}
           CPU_COUNT: ${{ inputs.CPU_COUNT }}
-          IMS_BASE_URL: ${{ inputs.IMS_BASE_URL }}
-          FFC_BASE_URL: ${{ inputs.FFC_BASE_URL }}
-          GATSBY_EXPRESS_URL: ${{ secrets.GATSBY_EXPRESS_URL }}
+          IMS_BASE_URL: ${{ inputs.IMS_BASE_URL_PROD }}
+          FFC_BASE_URL: ${{ inputs.FFC_BASE_URL_PROD }}
+          GATSBY_EXPRESS_URL: ${{ secrets.GATSBY_EXPRESS_URL_PROD }}
           PLAYGROUND_CLIENT_ID: ${{ secrets.PLAYGROUND_CLIENT_ID }}
           PLAYGROUND_CLIENT_SECRET: ${{ secrets.PLAYGROUND_CLIENT_SECRET }}
           PLAYGROUND_AUTH_CODE: ${{ secrets.PLAYGROUND_AUTH_CODE }}

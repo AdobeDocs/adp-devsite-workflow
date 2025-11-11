@@ -79,12 +79,42 @@ jobs:
           path: scripts
           ref: main
 
-      - uses: nrwl/nx-set-shas@v3
-        id: last_successful_commit_push
+      - name: Get last successful workflow_dispatch run
+        id: last_successful_workflow_dispatch_run
+        uses: actions/github-script@v7
         with:
-          main-branch-name: ${{ needs.set-state.outputs.branch_short_ref }}
-          last-successful-event: 'workflow_dispatch' # This is the event that triggered the last successful workflow run.
-          workflow-id: ${{ needs.set-state.outputs.deploy_prod == 'true' && 'deploy.yml' || 'stage.yml' }}
+          script: |
+            const { owner, repo } = context.repo;
+            const branch = needs.set-state.outputs.branch_short_ref;
+            const workflowId = ${{ needs.set-state.outputs.deploy_prod == 'true' && 'deploy.yml' || 'stage.yml' }}
+
+            const workflowRuns = await github.rest.actions.listWorkflowRuns({
+              owner,
+              repo,
+              workflow_id: workflowId,
+              branch: branch,
+              event: 'workflow_dispatch',
+              status: 'success',
+              per_page: 1, // Only need the latest one
+            });
+
+            if (workflowRuns.data.workflow_runs.length > 0) {
+              const lastSuccessfulRun = workflowRuns.data.workflow_runs[0];
+              console.log(`Last successful workflow_dispatch run on branch '${branch}':`);
+              console.log(`ID: ${lastSuccessfulRun.id}`);
+              console.log(`Commit SHA: ${lastSuccessfulRun.head_sha}`);
+              console.log(`Run URL: ${lastSuccessfulRun.html_url}`);
+              core.setOutput('base', lastSuccessfulRun.head_sha);
+            } else {
+              console.log(`No successful workflow_dispatch runs found on branch '${branch}' for workflow '${workflowId}'.`);
+              core.setOutput('base', '');
+            }
+      # - uses: nrwl/nx-set-shas@v3
+      #   id: last_successful_commit_push
+      #   with:
+      #     main-branch-name: ${{ needs.set-state.outputs.branch_short_ref }}
+      #     last-successful-event: 'workflow_dispatch' # This is the event that triggered the last successful workflow run.
+      #     workflow-id: ${{ needs.set-state.outputs.deploy_prod == 'true' && 'deploy.yml' || 'stage.yml' }}
 
       - name: Get changed files in the src/pages folder
         if: needs.set-state.outputs.deploy_All == 'false'
@@ -95,7 +125,7 @@ jobs:
           escape_json: false
           files: |
             src/pages/**
-          base_sha: ${{ needs.set-state.outputs.base_Sha || steps.last_successful_commit_push.outputs.base }}
+          base_sha: ${{ needs.set-state.outputs.base_Sha || steps.last_successful_workflow_dispatch_run.outputs.base }}
 
       - name: Get all files from src/pages folder
         if: needs.set-state.outputs.deploy_All == 'true'

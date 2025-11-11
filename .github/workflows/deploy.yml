@@ -85,8 +85,8 @@ jobs:
         with:
           script: |
             const { owner, repo } = context.repo;
-            const branch = needs.set-state.outputs.branch_short_ref;
-            const workflowId = ${{ needs.set-state.outputs.deploy_prod == 'true' && 'deploy.yml' || 'stage.yml' }}
+            const branch = '${{ needs.set-state.outputs.branch_short_ref }}';
+            const workflowId = '${{ needs.set-state.outputs.deploy_prod == 'true' && 'deploy.yml' || 'stage.yml' }}';
 
             const workflowRuns = await github.rest.actions.listWorkflowRuns({
               owner,

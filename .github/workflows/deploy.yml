@@ -88,7 +88,7 @@ jobs:
           escape_json: false
           files: |
             src/pages/**
-          base_sha: ${{ needs.set-state.outputs.base_Sha }}
+          base_sha: ${{ needs.set-state.outputs.base_Sha || steps.last_successful_commit_push.outputs.base }}
 
       - name: Get all files from src/pages folder
         if: needs.set-state.outputs.deploy_All == 'true'

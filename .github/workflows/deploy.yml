@@ -82,7 +82,8 @@ jobs:
       - uses: nrwl/nx-set-shas@v3
         id: last_successful_commit_push
         with:
-          main-branch-name: ${{ needs.set-state.outputs.branch_short_ref }} # Get the last successful commit for the current branch.
+          main-branch-name: ${{ needs.set-state.outputs.branch_short_ref }}
+          last-successful-event: 'workflow_dispatch' # This is the event that triggered the last successful workflow run.
           workflow-id: ${{ needs.set-state.outputs.deploy_prod == 'true' && 'deploy.yml' || 'stage.yml' }}
 
       - name: Get changed files in the src/pages folder

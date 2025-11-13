@@ -77,7 +77,7 @@ jobs:
         with:
           repository: AdobeDocs/adp-devsite-scripts
           path: scripts
-          ref: main
+          ref: deploy-fail
 
       - name: Get last successful workflow_dispatch run
         id: last_successful_workflow_dispatch_run

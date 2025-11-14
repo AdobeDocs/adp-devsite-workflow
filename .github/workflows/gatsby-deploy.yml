@@ -79,6 +79,14 @@ on:
         type: string
         required: false
         default: ""
+      GATSBY_OPENAPI_SPEC_BASE_URL_DEV:
+        type: string
+        required: false
+        default: ""
+      GATSBY_OPENAPI_SPEC_BASE_URL_PROD:
+        type: string
+        required: false
+        default: ""
 
 jobs:
   set-state:
@@ -221,6 +229,7 @@ jobs:
           GATSBY_DESKTOP_FOOTER_SCREEN_WIDTH_MAX: ${{ inputs.DESKTOP_FOOTER_SCREEN_WIDTH_MAX }}
           GATSBY_PRODUCT_NAME: ${{ inputs.PRODUCT_NAME }}
           GATSBY_TEMPLATE_ID: ${{ inputs.TEMPLATE_ID_DEV }}
+          GATSBY_OPENAPI_SPEC_BASE_URL: ${{ inputs.GATSBY_OPENAPI_SPEC_BASE_URL_DEV }}
           GATSBY_DC_LINKED_IN: ${{ inputs.DC_LINKED_IN }}
           NODE_OPTIONS: ${{ inputs.NODE_OPTIONS }}
           CPU_COUNT: ${{ inputs.CPU_COUNT }}
@@ -342,6 +351,7 @@ jobs:
           GATSBY_DESKTOP_FOOTER_SCREEN_WIDTH_MAX: ${{ inputs.DESKTOP_FOOTER_SCREEN_WIDTH_MAX }}
           GATSBY_PRODUCT_NAME: ${{ inputs.PRODUCT_NAME }}
           GATSBY_TEMPLATE_ID: ${{ inputs.TEMPLATE_ID_PROD }}
+          GATSBY_OPENAPI_SPEC_BASE_URL: ${{ inputs.GATSBY_OPENAPI_SPEC_BASE_URL_PROD }}
           GATSBY_DC_LINKED_IN: ${{ inputs.DC_LINKED_IN }}
           NODE_OPTIONS: ${{ inputs.NODE_OPTIONS }}
           CPU_COUNT: ${{ inputs.CPU_COUNT }}

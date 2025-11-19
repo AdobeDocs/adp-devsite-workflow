@@ -2,7 +2,7 @@
 name: PR Comment
 on:
   workflow_run:
-    workflows: ["Validate pull request"]
+    workflows: ["PR validation"]
     types:
       - completed
 
@@ -44,3 +44,4 @@ jobs:
               repo: context.repo.repo,
               body: `⚠️ **Warnings found but no fatal errors.**\n\nSee the [job summary](${jobUrl}) for details.`
             });
+

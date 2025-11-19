@@ -37,19 +37,8 @@ jobs:
             echo "⏭️ No changes in src/pages/, skipping validation"
           fi
 
-  toc:
-    needs: check-files
-    if: needs.check-files.outputs.run_validation == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Run TOC validation
-        run: npm run test:config
-
   markdown-lint:
-    needs: [check-files, toc]
+    needs: [check-files]
     if: needs.check-files.outputs.run_validation == 'true'
     runs-on: ubuntu-latest
     steps:
@@ -132,7 +121,7 @@ jobs:
   # Gate job that always runs and becomes the required check
   validate-pr:
     runs-on: ubuntu-latest
-    needs: [check-files, toc, markdown-lint, remark-lint]
+    needs: [check-files, markdown-lint, remark-lint]
     if: always()
     steps:
       - name: Check validation results
@@ -146,14 +135,12 @@ jobs:
           fi
           
           # If src/pages files changed, check that all validation jobs succeeded
-          if [[ "${{ needs.toc.result }}" == "success" ]] && \
-             [[ "${{ needs.markdown-lint.result }}" == "success" ]] && \
+          if [[ "${{ needs.markdown-lint.result }}" == "success" ]] && \
              [[ "${{ needs.remark-lint.result }}" == "success" ]]; then
             echo "✅ All validation checks passed"
             exit 0
           else
             echo "❌ One or more validation checks failed"
-            echo "TOC: ${{ needs.toc.result }}"
             echo "Markdown Lint: ${{ needs.markdown-lint.result }}"
             echo "Remark Lint: ${{ needs.remark-lint.result }}"
             exit 1

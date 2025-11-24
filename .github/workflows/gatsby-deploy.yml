@@ -87,6 +87,34 @@ on:
         type: string
         required: false
         default: ""
+      PLAYGROUND_CLIENT_ID_STAGE: 
+        type: string
+        required: false
+        default: ""
+      PLAYGROUND_CLIENT_ID_PROD: 
+        type: string
+        required: false
+        default: ""
+      PLAYGROUND_CLIENT_SECRET_STAGE: 
+        type: string
+        required: false
+        default: ""
+      PLAYGROUND_CLIENT_SECRET_PROD: 
+        type: string
+        required: false
+        default: ""
+      PLAYGROUND_AUTH_CODE_STAGE: 
+        type: string
+        required: false
+        default: ""
+      PLAYGROUND_AUTH_CODE_PROD: 
+        type: string
+        required: false
+        default: ""
+      PLAYGROUND_API_KEY: 
+        type: string
+        required: false
+        default: ""
 
 jobs:
   set-state:
@@ -236,10 +264,10 @@ jobs:
           IMS_BASE_URL: ${{ inputs.IMS_BASE_URL_STAGE }}
           FFC_BASE_URL: ${{ inputs.FFC_BASE_URL_STAGE }}
           GATSBY_EXPRESS_URL: ${{ secrets.GATSBY_EXPRESS_URL_STAGE }}
-          PLAYGROUND_CLIENT_ID: ${{ secrets.PLAYGROUND_CLIENT_ID_STAGE }}
-          PLAYGROUND_CLIENT_SECRET: ${{ secrets.PLAYGROUND_CLIENT_SECRET_STAGE }}
-          PLAYGROUND_AUTH_CODE: ${{ secrets.PLAYGROUND_AUTH_CODE_STAGE }}
-          PLAYGROUND_API_KEY: ${{ secrets.PLAYGROUND_API_KEY }}
+          PLAYGROUND_CLIENT_ID: ${{ inputs.PLAYGROUND_CLIENT_ID_STAGE }}
+          PLAYGROUND_CLIENT_SECRET: ${{ inputs.PLAYGROUND_CLIENT_SECRET_STAGE }}
+          PLAYGROUND_AUTH_CODE: ${{ inputs.PLAYGROUND_AUTH_CODE_STAGE }}
+          PLAYGROUND_API_KEY: ${{ inputs.PLAYGROUND_API_KEY }}
 
       - name: Deploy
         uses: AdobeDocs/static-website-deploy@master
@@ -358,10 +386,10 @@ jobs:
           IMS_BASE_URL: ${{ inputs.IMS_BASE_URL_PROD }}
           FFC_BASE_URL: ${{ inputs.FFC_BASE_URL_PROD }}
           GATSBY_EXPRESS_URL: ${{ secrets.GATSBY_EXPRESS_URL_PROD }}
-          PLAYGROUND_CLIENT_ID: ${{ secrets.PLAYGROUND_CLIENT_ID }}
-          PLAYGROUND_CLIENT_SECRET: ${{ secrets.PLAYGROUND_CLIENT_SECRET }}
-          PLAYGROUND_AUTH_CODE: ${{ secrets.PLAYGROUND_AUTH_CODE }}
-          PLAYGROUND_API_KEY: ${{ secrets.PLAYGROUND_API_KEY }}
+          PLAYGROUND_CLIENT_ID: ${{ inputs.PLAYGROUND_CLIENT_ID_PROD }}
+          PLAYGROUND_CLIENT_SECRET: ${{ inputs.PLAYGROUND_CLIENT_SECRET_PROD }}
+          PLAYGROUND_AUTH_CODE: ${{ inputs.PLAYGROUND_AUTH_CODE_PROD }}
+          PLAYGROUND_API_KEY: ${{ inputs.PLAYGROUND_API_KEY }}
 
       - name: Deploy
         uses: AdobeDocs/static-website-deploy@master

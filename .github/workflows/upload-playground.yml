@@ -101,7 +101,7 @@ jobs:
           PLAYGROUND_API_KEY: ${{ secrets.PLAYGROUND_API_KEY }}
         with:
           script: |
-            const upload = require('./scripts/upload-playground-samples.js');
+            const uploadPlayground = require('./scripts/upload-playground-samples.js');
             const filesRaw = `${{ steps.files.outputs.list }}`.trim();
             const files = filesRaw ? filesRaw.split('\n').filter(Boolean) : [];
 
@@ -110,7 +110,7 @@ jobs:
               return;
             }
 
-            await upload({ core, files });
+            await uploadPlayground({ files });
 
       - name: Skip upload (no markdown changes)
         if: steps.files.outputs.list == ''

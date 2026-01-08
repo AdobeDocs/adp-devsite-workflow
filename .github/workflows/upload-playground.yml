@@ -1,0 +1,118 @@
+name: Upload playground samples
+
+on:
+  workflow_call:
+    inputs:
+      TARGET_BRANCH:
+        type: string
+        required: false
+        default: "main"
+      FOLDER_PATH:
+        type: string
+        required: false
+        default: "src/pages"
+    secrets:
+      IMS_BASE_URL:
+        required: true
+      FFC_BASE_URL:
+        required: true
+      PLAYGROUND_CLIENT_ID:
+        required: true
+      PLAYGROUND_CLIENT_SECRET:
+        required: true
+      PLAYGROUND_AUTH_CODE:
+        required: true
+      PLAYGROUND_API_KEY:
+        required: true
+
+  workflow_dispatch:
+    inputs:
+      TARGET_BRANCH:
+        description: "Target branch to send PR to (e.g., main, stage, etc)"
+        type: string
+        required: false
+        default: "main"
+      FOLDER_PATH:
+        description: "Folder path to read files from (defaults to src/pages)"
+        type: string
+        required: false
+        default: "src/pages"
+
+jobs:
+  upload-playground:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Checkout Scripts Repo
+        uses: actions/checkout@v4
+        with:
+          repository: AdobeDocs/adp-devsite-scripts
+          path: scripts
+          ref: main
+
+      - name: Install scripts dependencies
+        run: |
+          cd scripts
+          npm install
+
+      - name: Collect changed markdown files
+        id: files
+        shell: bash
+        run: |
+          shopt -s globstar
+
+          BASE="${{ github.event.before }}"
+          HEAD="${{ github.sha }}"
+          TARGET_PATH="${{ inputs.FOLDER_PATH }}"
+
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            BASE="${HEAD}^"
+          fi
+
+          CHANGED=$(git diff --name-only "$BASE" "$HEAD" -- "$TARGET_PATH"/**/*.md)
+          if [ -n "$CHANGED" ]; then
+            printf 'list<<EOF\n%s\nEOF\n' "$CHANGED" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload changed code blocks to FFC
+        if: steps.files.outputs.list != ''
+        uses: actions/github-script@v7
+        env:
+          IMS_BASE_URL: ${{ secrets.IMS_BASE_URL }}
+          FFC_BASE_URL: ${{ secrets.FFC_BASE_URL }}
+          PLAYGROUND_CLIENT_ID: ${{ secrets.PLAYGROUND_CLIENT_ID }}
+          PLAYGROUND_CLIENT_SECRET: ${{ secrets.PLAYGROUND_CLIENT_SECRET }}
+          PLAYGROUND_AUTH_CODE: ${{ secrets.PLAYGROUND_AUTH_CODE }}
+          PLAYGROUND_API_KEY: ${{ secrets.PLAYGROUND_API_KEY }}
+        with:
+          script: |
+            const uploadPlayground = require('./scripts/upload-playground/upload-playground-samples.js');
+            const filesRaw = `${{ steps.files.outputs.list }}`.trim();
+            const files = filesRaw ? filesRaw.split('\n').filter(Boolean) : [];
+
+            if (!files.length) {
+              core.info('No markdown file changes detected; skipping upload.');
+              return;
+            }
+
+            await uploadPlayground({ files });
+
+      - name: Skip upload (no markdown changes)
+        if: steps.files.outputs.list == ''
+        run: echo "No markdown file changes detected; skipping upload."
+

@@ -77,7 +77,7 @@ jobs:
         with:
           repository: AdobeDocs/adp-devsite-utils
           path: utils
-          ref: build-site-metadata
+          ref: main
 
       - name: Install utils dependencies
         run: |

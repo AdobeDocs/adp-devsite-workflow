@@ -49,6 +49,13 @@ jobs:
         run: echo "branch=${GITHUB_REF#refs/heads/}" >> "$GITHUB_OUTPUT"
         id: get_branch
 
+      - name: Validate branch name
+        if: contains(steps.get_branch.outputs.branch, '/')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.setFailed("Branch name '${{ steps.get_branch.outputs.branch }}' contains a slash (/), which is not supported by EDS. Please rename your branch to remove the slash and try again.");
+
   echo-state:
     needs: [set-state]
     runs-on: ubuntu-latest

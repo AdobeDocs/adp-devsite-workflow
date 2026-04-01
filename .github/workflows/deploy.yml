@@ -12,8 +12,21 @@ on:
       deployAll:
         type: boolean
         default: false
+    secrets:
+      ADP_DEVSITE_APP_ID:
+        required: true
+      ADP_DEVSITE_APP_PRIVATE_KEY:
+        required: true
 
 jobs:
+  build-auto-generated-files:
+    name: Build Auto-Generated Files
+    if: github.repository != 'AdobeDocs/dev-docs-template' && github.actor != 'adp-devsite-bot[bot]'
+    uses: ./.github/workflows/build-auto-generated-files.yml
+    secrets:
+      ADP_DEVSITE_APP_ID: ${{ secrets.ADP_DEVSITE_APP_ID }}
+      ADP_DEVSITE_APP_PRIVATE_KEY: ${{ secrets.ADP_DEVSITE_APP_PRIVATE_KEY }}
+
   set-state:
     runs-on: ubuntu-latest
     outputs:

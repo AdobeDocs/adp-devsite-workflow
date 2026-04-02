@@ -2,11 +2,6 @@
 name: Build Site Metadata
 on:
   workflow_call:
-    secrets:
-      ADP_DEVSITE_APP_ID:
-        required: true
-      ADP_DEVSITE_APP_PRIVATE_KEY:
-        required: true
 
 jobs:
   build-site-metadata:
@@ -17,14 +12,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          persist-credentials: false
-
-      - name: Generate GitHub App token
-        id: app-token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ secrets.ADP_DEVSITE_APP_ID }}
-          private-key: ${{ secrets.ADP_DEVSITE_APP_PRIVATE_KEY }}
+          ref: ${{ github.head_ref }}
 
       - name: Build Site Metadata
         run: npx --yes github:AdobeDocs/adp-devsite-utils buildSiteMetadata -v
@@ -33,8 +21,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git remote set-url origin https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/${{ github.repository }}
           git add src/pages/adp-site-metadata.json
-          git pull
-          git diff --cached --quiet || git commit -m "chore: auto-generate site metadata"
+          git diff --cached --quiet || git commit -m "Generate site metadata"
+          git pull --rebase
           git push

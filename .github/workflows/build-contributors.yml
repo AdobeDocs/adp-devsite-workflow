@@ -2,19 +2,6 @@
 name: Build Contributors
 on:
   workflow_call:
-    inputs:
-      baseSha:
-        type: string
-        required: false
-      buildAll:
-        type: boolean
-        required: false
-        default: false
-    secrets:
-      ADP_DEVSITE_APP_ID:
-        required: true
-      ADP_DEVSITE_APP_PRIVATE_KEY:
-        required: true
 
 jobs:
   build-contributors:
@@ -25,8 +12,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.head_ref }}
           fetch-depth: 0
-          persist-credentials: false
 
       - name: Generate GitHub App token
         id: app-token
@@ -36,17 +23,15 @@ jobs:
           private-key: ${{ secrets.ADP_DEVSITE_APP_PRIVATE_KEY }}
 
       - name: Build Contributors
-        run: npx --yes github:AdobeDocs/adp-devsite-utils buildContributors -v ${{ inputs.buildAll && '--all' || '' }}
+        run: npx --yes github:AdobeDocs/adp-devsite-utils buildContributors -v
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
-          BASE_SHA: ${{ inputs.baseSha || github.event.before }}
 
       - name: Commit and push if changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git remote set-url origin https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/${{ github.repository }}
-          git pull
           git add src/pages/contributors.json
-          git diff --cached --quiet || git commit -m "chore: auto-generate contributors"
+          git diff --cached --quiet || git commit -m "Generate contributors"
+          git pull --rebase
           git push

@@ -2,31 +2,13 @@
 name: Build Auto-Generated Files
 on:
   workflow_call:
-    inputs:
-      baseSha:
-        type: string
-        required: false
-      buildAll:
-        type: boolean
-        required: false
-        default: false
-    secrets:
-      ADP_DEVSITE_APP_ID:
-        required: true
-      ADP_DEVSITE_APP_PRIVATE_KEY:
-        required: true
 
 jobs:
   build-contributors:
     name: Build Contributors
     if: github.repository != 'AdobeDocs/dev-docs-template'
     uses: ./.github/workflows/build-contributors.yml
-    with:
-      baseSha: ${{ inputs.baseSha }}
-      buildAll: ${{ inputs.buildAll }}
-    secrets:
-      ADP_DEVSITE_APP_ID: ${{ secrets.ADP_DEVSITE_APP_ID }}
-      ADP_DEVSITE_APP_PRIVATE_KEY: ${{ secrets.ADP_DEVSITE_APP_PRIVATE_KEY }}
+    secrets: inherit
 
   build-site-metadata:
     name: Build Site Metadata
@@ -35,6 +17,3 @@ jobs:
       always() &&
       github.repository != 'AdobeDocs/dev-docs-template'
     uses: ./.github/workflows/build-site-metadata.yml
-    secrets:
-      ADP_DEVSITE_APP_ID: ${{ secrets.ADP_DEVSITE_APP_ID }}
-      ADP_DEVSITE_APP_PRIVATE_KEY: ${{ secrets.ADP_DEVSITE_APP_PRIVATE_KEY }}

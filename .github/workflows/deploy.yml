@@ -14,9 +14,9 @@ on:
         default: false
     secrets:
       ADP_DEVSITE_APP_ID:
-        required: true
+        required: false
       ADP_DEVSITE_APP_PRIVATE_KEY:
-        required: true
+        required: false
 
 jobs:
   get-base-sha:
@@ -62,6 +62,7 @@ jobs:
       deploy_prod: ${{ contains(inputs.env, 'prod') }}
       base_sha: ${{ inputs.baseSha || needs.get-base-sha.outputs.base_sha }}
       deploy_all: ${{ inputs.deployAll }}
+      has_app_secrets: ${{ secrets.ADP_DEVSITE_APP_ID != '' }}
 
     steps:
       - name: Checkout
@@ -111,7 +112,7 @@ jobs:
   build-auto-generated-files:
     name: Build Auto-Generated Files
     needs: [set-state]
-    if: github.repository != 'AdobeDocs/dev-docs-template'
+    if: github.repository != 'AdobeDocs/dev-docs-template' && needs.set-state.outputs.has_app_secrets == 'true'
     uses: ./.github/workflows/build-auto-generated-files.yml
     with:
       baseSha: ${{ needs.set-state.outputs.base_sha }}

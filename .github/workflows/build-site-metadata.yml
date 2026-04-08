@@ -30,7 +30,8 @@ jobs:
       - name: Recommend building metadata locally
         if: github.event.pull_request.head.repo.fork == true && steps.check_changes.outputs.changed == 'true'
         run: |
-          echo "::warning::This PR is from a fork. Please run 'npm run buildSiteMetadata' locally and commit the updated src/pages/adp-site-metadata.json file."
+          echo "::error::This PR is from a fork. Please run 'npm run buildSiteMetadata' locally and commit the updated src/pages/adp-site-metadata.json file."
+          exit 1
 
       - name: Commit and push if changed
         if: steps.check_changes.outputs.changed == 'true' && github.event.pull_request.head.repo.full_name == github.repository

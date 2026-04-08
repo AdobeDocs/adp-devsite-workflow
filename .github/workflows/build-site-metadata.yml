@@ -12,7 +12,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.head_ref }}
+          ref: ${{ github.event.pull_request.head.repo.fork && github.sha || github.head_ref }}
 
       - name: Build Site Metadata
         run: npx --yes github:AdobeDocs/adp-devsite-utils buildSiteMetadata -v
@@ -27,8 +27,13 @@ jobs:
             echo "changed=true" >> $GITHUB_OUTPUT
           fi
 
+      - name: Recommend building metadata locally
+        if: github.event.pull_request.head.repo.fork == true && steps.check_changes.outputs.changed == 'true'
+        run: |
+          echo "::warning::This PR is from a fork. Please run 'npm run buildSiteMetadata' locally and commit the updated src/pages/adp-site-metadata.json file."
+
       - name: Commit and push if changed
-        if: steps.check_changes.outputs.changed == 'true'
+        if: steps.check_changes.outputs.changed == 'true' && github.event.pull_request.head.repo.full_name == github.repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"

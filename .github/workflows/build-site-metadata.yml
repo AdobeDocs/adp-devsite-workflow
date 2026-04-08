@@ -22,6 +22,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add src/pages/adp-site-metadata.json
-          git diff --cached --quiet || git commit -m "Generate site metadata"
+          if git diff --cached --quiet; then
+            echo "No changes to commit, skipping commit and push"
+            exit 0
+          fi
+          git commit -m "Generate site metadata"
           git pull --rebase
           git push

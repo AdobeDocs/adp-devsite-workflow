@@ -295,6 +295,35 @@ jobs:
           cp -r ../adp-devsite/hlx_statics/* localhost+3000/hlx_statics/
           echo "✓ Copied $(find localhost+3000/hlx_statics -type f | wc -l | tr -d ' ') static files"
 
+      - name: Copy spec and data files
+        run: |
+          ROOT_DIR=$(pwd)
+          cd "$ROOT_DIR/_site"
+          COUNT=0
+
+          # Copy JSON/YML/YAML from static/
+          if [ -d "$ROOT_DIR/content/static" ]; then
+            for file in $(find "$ROOT_DIR/content/static" -type f \( -name "*.json" -o -name "*.yml" -o -name "*.yaml" \)); do
+              rel_path="${file#$ROOT_DIR/content/}"
+              mkdir -p "$(dirname "$rel_path")"
+              cp "$file" "$rel_path"
+              echo "  Copied $rel_path"
+              COUNT=$((COUNT + 1))
+            done
+          fi
+
+          # Copy JSON/YML/YAML from src/pages/ (exclude auto-generated files)
+          for file in $(find "$ROOT_DIR/content/src/pages" -type f \( -name "*.json" -o -name "*.yml" -o -name "*.yaml" \) \
+            ! -name "contributors.json" ! -name "adp-site-metadata.json"); do
+            rel_path="${file#$ROOT_DIR/content/src/pages/}"
+            mkdir -p "$(dirname "$rel_path")"
+            cp "$file" "$rel_path"
+            echo "  Copied $rel_path"
+            COUNT=$((COUNT + 1))
+          done
+
+          echo "✓ Copied $COUNT spec/data files"
+
       - name: Fetch API endpoints
         run: |
           cd _site

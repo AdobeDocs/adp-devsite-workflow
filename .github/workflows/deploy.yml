@@ -12,6 +12,17 @@ on:
       deployAll:
         type: boolean
         default: false
+    secrets:
+      AIO_AZURE_DEV_PRIVATE_CONNECTION_STRING:
+        required: false
+      AIO_AZURE_PROD_PRIVATE_CONNECTION_STRING:
+        required: false
+      AIO_FASTLY_TOKEN:
+        required: false
+      AIO_FASTLY_PROD_URL:
+        required: false
+      AIO_FASTLY_DEV_URL:
+        required: false
 
 jobs:
   set-state:
@@ -74,14 +85,24 @@ jobs:
   private-deployment-stg:
     if: github.repository_owner == 'AdobeDocsPrivate' && contains(inputs.env, 'stage')
     uses: ./.github/workflows/private-deploy.yml
-    secrets: inherit
+    secrets:
+      AIO_AZURE_DEV_PRIVATE_CONNECTION_STRING: ${{ secrets.AIO_AZURE_DEV_PRIVATE_CONNECTION_STRING }}
+      AIO_AZURE_PROD_PRIVATE_CONNECTION_STRING: ${{ secrets.AIO_AZURE_PROD_PRIVATE_CONNECTION_STRING }}
+      AIO_FASTLY_TOKEN: ${{ secrets.AIO_FASTLY_TOKEN }}
+      AIO_FASTLY_PROD_URL: ${{ secrets.AIO_FASTLY_PROD_URL }}
+      AIO_FASTLY_DEV_URL: ${{ secrets.AIO_FASTLY_DEV_URL }}
     with:
       env: stg
 
   private-deployment-prod:
     if: github.repository_owner == 'AdobeDocsPrivate' && contains(inputs.env, 'prod')
     uses: ./.github/workflows/private-deploy.yml
-    secrets: inherit
+    secrets:
+      AIO_AZURE_DEV_PRIVATE_CONNECTION_STRING: ${{ secrets.AIO_AZURE_DEV_PRIVATE_CONNECTION_STRING }}
+      AIO_AZURE_PROD_PRIVATE_CONNECTION_STRING: ${{ secrets.AIO_AZURE_PROD_PRIVATE_CONNECTION_STRING }}
+      AIO_FASTLY_TOKEN: ${{ secrets.AIO_FASTLY_TOKEN }}
+      AIO_FASTLY_PROD_URL: ${{ secrets.AIO_FASTLY_PROD_URL }}
+      AIO_FASTLY_DEV_URL: ${{ secrets.AIO_FASTLY_DEV_URL }}
     with:
       env: prod
 

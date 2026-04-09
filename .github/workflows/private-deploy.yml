@@ -8,6 +8,17 @@ on:
         required: true
         default: "stg"
         type: string
+    secrets:
+      AIO_AZURE_DEV_PRIVATE_CONNECTION_STRING:
+        required: true
+      AIO_AZURE_PROD_PRIVATE_CONNECTION_STRING:
+        required: true
+      AIO_FASTLY_TOKEN:
+        required: true
+      AIO_FASTLY_PROD_URL:
+        required: true
+      AIO_FASTLY_DEV_URL:
+        required: true
 
 jobs:
   matrix_prep:

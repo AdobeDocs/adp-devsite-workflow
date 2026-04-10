@@ -1,0 +1,6 @@
+[
+  { "org": "AdobeDocs",        "env": "stg",  "runner": "ubuntu-latest" },
+  { "org": "AdobeDocs",        "env": "prod", "runner": "ubuntu-latest" },
+  { "org": "AdobeDocsPrivate", "env": "stg",  "runner": "developer-website-arc-stg-runners" },
+  { "org": "AdobeDocsPrivate", "env": "prod", "runner": "developer-website-arc-prd-runners" }
+]

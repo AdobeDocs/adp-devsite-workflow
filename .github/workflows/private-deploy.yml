@@ -1,25 +1,29 @@
 ---
-name: Production Deployment
+name: Private Deployment
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       env:
         description: "Deploy to (stg|prod)"
         required: true
         default: "stg"
-      clean:
-        description: "Clean cache (yes|no)"
-        required: true
-        default: "no"
+        type: string
 
 jobs:
   matrix_prep:
-    runs-on: ${{ github.event.organization == 'AdobeDocsPrivate' && (contains(github.event.inputs.env, 'prod') && 'developer-website-arc-prd-runners' || 'developer-website-arc-stg-runners') || 'ubuntu-latest' }}
+    if: github.repository_owner == 'AdobeDocsPrivate'
+    runs-on: ${{ github.repository_owner == 'AdobeDocsPrivate' && (contains(inputs.env, 'prod') && 'developer-website-arc-prd-runners' || 'developer-website-arc-stg-runners') || 'ubuntu-latest' }}
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Checkout adp-devsite-workflow for runner matrix
+        uses: actions/checkout@v4
+        with:
+          repository: AdobeDocs/adp-devsite-workflow
+          path: _workflow-config
 
       - name: Set Matrix
         id: set-matrix
@@ -28,10 +32,10 @@ jobs:
           echo "MATRIX PREPARATION"
           echo "================================================"
           echo "Organization: ${{ github.repository_owner }}"
-          echo "Environment: ${{ github.event.inputs.env }}"
-          
+          echo "Environment: ${{ inputs.env }}"
+
           # Load the JSON data
-          matrix=$(jq --arg org "${{ github.repository_owner }}" --arg env "${{ github.event.inputs.env }}" '[.[] | select(.org == $org and .env == $env)]' .github/matrix/runner_matrix.json)
+          matrix=$(jq --arg org "${{ github.repository_owner }}" --arg env "${{ inputs.env }}" '[.[] | select(.org == $org and .env == $env)]' _workflow-config/.github/matrix/runner_matrix.json)
 
           # Set the formatted matrix as an output
           echo "matrix={\"include\":$(echo $matrix)}" >> $GITHUB_OUTPUT
@@ -44,9 +48,9 @@ jobs:
     strategy:
       matrix: ${{fromJson(needs.matrix_prep.outputs.matrix)}}
     outputs:
-      deploy_prod: ${{ contains(github.event.inputs.env, 'prod') }}
-      deploy_stg: ${{ contains(github.event.inputs.env, 'stg') }}
-      clean_cache: ${{ contains(github.event.inputs.clean, 'yes') }}
+      deploy_prod: ${{ contains(inputs.env, 'prod') }}
+      deploy_stg: ${{ contains(inputs.env, 'stg') }}
+      clean_cache: ${{ contains(inputs.env, 'yes') }}
       path_prefix: ${{ steps.get_path_prefix.outputs.path_prefix }}
       branch_short_ref: ${{ steps.get_branch.outputs.branch }}
 
@@ -85,7 +89,6 @@ jobs:
       - run: echo "Repository name - ${{ github.event.repository.name }}"
       - run: echo "Repository branch - ${{ needs.set-state.outputs.branch_short_ref }}"
       - run: echo "Path prefix - ${{ needs.set-state.outputs.path_prefix }}"
-      - run: echo "Connection string - ${{ needs.set-state.outputs.connection_string }}"
 
   pre-build:
     needs: [set-state, matrix_prep]
@@ -98,7 +101,7 @@ jobs:
 
     steps:
       - name: Check stage Private Azure connection string
-        if: needs.set-state.outputs.deploy_stg == 'true' && github.event.organization == 'AdobeDocsPrivate' && env.AIO_AZURE_DEV_PRIVATE_CONNECTION_STRING == null
+        if: needs.set-state.outputs.deploy_stg == 'true' && env.AIO_AZURE_DEV_PRIVATE_CONNECTION_STRING == null
         run: |
           echo "::error::Please set the Azure Blob Storage connection string as AIO_AZURE_DEV_PRIVATE_CONNECTION_STRING in Github Secrets"
           exit 1
@@ -106,28 +109,12 @@ jobs:
           AIO_AZURE_DEV_PRIVATE_CONNECTION_STRING: ${{ secrets.AIO_AZURE_DEV_PRIVATE_CONNECTION_STRING }}
 
       - name: Check prod Private Azure connection string
-        if: needs.set-state.outputs.deploy_prod == 'true' && github.event.organization == 'AdobeDocsPrivate' && env.AIO_AZURE_PROD_PRIVATE_CONNECTION_STRING == null
+        if: needs.set-state.outputs.deploy_prod == 'true' && env.AIO_AZURE_PROD_PRIVATE_CONNECTION_STRING == null
         run: |
           echo "::error::Please set the Azure Blob Storage connection string as AIO_AZURE_PROD_PRIVATE_CONNECTION_STRING in Github Secrets"
           exit 1
         env:
           AIO_AZURE_PROD_PRIVATE_CONNECTION_STRING: ${{ secrets.AIO_AZURE_PROD_PRIVATE_CONNECTION_STRING }}
-
-      - name: Check stage Azure connection string
-        if: needs.set-state.outputs.deploy_stg == 'true' && github.event.organization == 'AdobeDocs' && env.AIO_AZURE_DEV_CONNECTION_STRING == null
-        run: |
-          echo "::error::Please set the Azure Blob Storage connection string as AIO_AZURE_DEV_CONNECTION_STRING in Github Secrets"
-          exit 1
-        env:
-          AIO_AZURE_DEV_CONNECTION_STRING: ${{ secrets.AIO_AZURE_DEV_CONNECTION_STRING }}
-
-      - name: Check prod Azure connection string
-        if: needs.set-state.outputs.deploy_prod == 'true' && github.event.organization == 'AdobeDocs' && env.AIO_AZURE_PROD_CONNECTION_STRING == null
-        run: |
-          echo "::error::Please set the Azure Blob Storage connection string as AIO_AZURE_PROD_CONNECTION_STRING in Github Secrets"
-          exit 1
-        env:
-          AIO_AZURE_PROD_CONNECTION_STRING: ${{ secrets.AIO_AZURE_PROD_CONNECTION_STRING }}
 
   build:
     defaults:
@@ -147,29 +134,19 @@ jobs:
         env:
           AIO_AZURE_DEV_PRIVATE_CONNECTION_STRING: ${{ secrets.AIO_AZURE_DEV_PRIVATE_CONNECTION_STRING }}
           AIO_AZURE_PROD_PRIVATE_CONNECTION_STRING: ${{ secrets.AIO_AZURE_PROD_PRIVATE_CONNECTION_STRING }}
-          AIO_AZURE_DEV_CONNECTION_STRING: ${{ secrets.AIO_AZURE_DEV_CONNECTION_STRING }}
-          AIO_AZURE_PROD_CONNECTION_STRING: ${{ secrets.AIO_AZURE_PROD_CONNECTION_STRING }}
         with:
           result-encoding: string
           script: |
             console.log('================================================');
             console.log('SELECTING AZURE CONNECTION STRING');
             console.log('================================================');
-            
-            const org = context.payload.organization.login;
-            const isProd = context.payload.inputs.env === 'prod';
-            const isPrivate = org === 'AdobeDocsPrivate';
-            
-            console.log(`Organization: ${org} (${isPrivate ? 'Private' : 'Public'})`);
-            console.log(`Environment: ${isProd ? 'Production' : 'Staging'}`);
-            
-            let connectionString = '';
 
-            if (isPrivate) {
-              connectionString = isProd ? process.env.AIO_AZURE_PROD_PRIVATE_CONNECTION_STRING : process.env.AIO_AZURE_DEV_PRIVATE_CONNECTION_STRING;
-            } else {
-              connectionString = isProd ? process.env.AIO_AZURE_PROD_CONNECTION_STRING : process.env.AIO_AZURE_DEV_CONNECTION_STRING;
-            }
+            const isProd = '${{ inputs.env }}' === 'prod';
+            console.log(`Environment: ${isProd ? 'Production' : 'Staging'}`);
+
+            const connectionString = isProd
+              ? process.env.AIO_AZURE_PROD_PRIVATE_CONNECTION_STRING
+              : process.env.AIO_AZURE_DEV_PRIVATE_CONNECTION_STRING;
 
             console.log('✓ Connection string selected');
             return connectionString;

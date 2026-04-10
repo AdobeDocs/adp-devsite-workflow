@@ -15,6 +15,7 @@ on:
 
 jobs:
   set-state:
+    if: github.repository_owner != 'AdobeDocsPrivate'
     runs-on: ubuntu-latest
     outputs:
       path_prefix: ${{ steps.get_path_prefix.outputs.path_prefix }}
@@ -58,6 +59,7 @@ jobs:
 
   echo-state:
     needs: [set-state]
+    if: github.repository_owner != 'AdobeDocsPrivate'
     runs-on: ubuntu-latest
     steps:
       - run: echo "Deploy to stage - ${{ needs.set-state.outputs.deploy_stage }}"
@@ -69,11 +71,26 @@ jobs:
       - run: echo "Base Sha - ${{ needs.set-state.outputs.base_Sha }}"
       - run: echo "Deploy All - ${{ needs.set-state.outputs.deploy_All }}"
 
+  private-deployment-stg:
+    if: github.repository_owner == 'AdobeDocsPrivate' && contains(inputs.env, 'stage')
+    uses: ./.github/workflows/private-deploy.yml
+    secrets: inherit
+    with:
+      env: stg
+
+  private-deployment-prod:
+    if: github.repository_owner == 'AdobeDocsPrivate' && contains(inputs.env, 'prod')
+    uses: ./.github/workflows/private-deploy.yml
+    secrets: inherit
+    with:
+      env: prod
+
   deploy:
     defaults:
       run:
         shell: bash
     needs: [set-state]
+    if: github.repository_owner != 'AdobeDocsPrivate'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

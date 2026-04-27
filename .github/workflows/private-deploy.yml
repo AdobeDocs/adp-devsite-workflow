@@ -337,7 +337,7 @@ jobs:
 
           # File types referenced from markdown (Redocly, images, downloads). Deployed beside HTML on Azure.
           asset_pred=( -type f \( \
-            -iname "*.json" -o -iname "*.yml" -o -iname "*.yaml" \
+            -iname "*.json" -o -iname "*.yml" -o -iname "*.yaml" -o -iname "*.d.ts" \
             -o -iname "*.png" -o -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.gif" -o -iname "*.webp" -o -iname "*.svg" -o -iname "*.ico" \
             -o -iname "*.pdf" -o -iname "*.zip" -o -iname "*.tgz" -o -iname "*.gz" \
             -o -iname "*.mp4" -o -iname "*.webm" -o -iname "*.mov" -o -iname "*.wav" -o -iname "*.mp3" \

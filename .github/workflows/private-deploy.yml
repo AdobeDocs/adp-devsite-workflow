@@ -188,7 +188,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: AdobeDocs/adp-devsite
-          ref: secure-private-config
+          ref: main
           path: adp-devsite
 
       - name: Clone devsite-runtime-connector
@@ -329,34 +329,45 @@ jobs:
           cp -r ../adp-devsite/hlx_statics/* localhost+3000/hlx_statics/
           echo "✓ Copied $(find localhost+3000/hlx_statics -type f | wc -l | tr -d ' ') static files"
 
-      - name: Copy spec and data files
+      - name: Copy spec, data, and static media files
         run: |
           ROOT_DIR=$(pwd)
           cd "$ROOT_DIR/_site"
           COUNT=0
 
-          # Copy JSON/YML/YAML from static/
+          # File types referenced from markdown (Redocly, images, downloads). Deployed beside HTML on Azure.
+          asset_pred=( -type f \( \
+            -iname "*.json" -o -iname "*.yml" -o -iname "*.yaml" -o -iname "*.d.ts" \
+            -o -iname "*.png" -o -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.gif" -o -iname "*.webp" -o -iname "*.svg" -o -iname "*.ico" \
+            -o -iname "*.pdf" -o -iname "*.zip" -o -iname "*.tgz" -o -iname "*.gz" \
+            -o -iname "*.mp4" -o -iname "*.webm" -o -iname "*.mov" -o -iname "*.wav" -o -iname "*.mp3" \
+            -o -iname "*.woff" -o -iname "*.woff2" -o -iname "*.ttf" -o -iname "*.eot" \
+            \) )
+
+          # Copy from content/static/ (preserve static/ prefix for /{pathPrefix}/static/... URLs)
           if [ -d "$ROOT_DIR/content/static" ]; then
-            for file in $(find "$ROOT_DIR/content/static" -type f \( -name "*.json" -o -name "*.yml" -o -name "*.yaml" \)); do
+            while IFS= read -r file; do
+              [ -f "$file" ] || continue
               rel_path="${file#$ROOT_DIR/content/}"
               mkdir -p "$(dirname "$rel_path")"
               cp "$file" "$rel_path"
               echo "  Copied $rel_path"
               COUNT=$((COUNT + 1))
-            done
+            done < <(find "$ROOT_DIR/content/static" "${asset_pred[@]}")
           fi
 
-          # Copy JSON/YML/YAML from src/pages/ (exclude auto-generated files)
-          for file in $(find "$ROOT_DIR/content/src/pages" -type f \( -name "*.json" -o -name "*.yml" -o -name "*.yaml" \) \
-            ! -name "contributors.json" ! -name "adp-site-metadata.json"); do
+          # Copy from src/pages/ (exclude auto-generated JSON)
+          while IFS= read -r file; do
+            [ -f "$file" ] || continue
             rel_path="${file#$ROOT_DIR/content/src/pages/}"
             mkdir -p "$(dirname "$rel_path")"
             cp "$file" "$rel_path"
             echo "  Copied $rel_path"
             COUNT=$((COUNT + 1))
-          done
+          done < <(find "$ROOT_DIR/content/src/pages" "${asset_pred[@]}" \
+            ! -name "contributors.json" ! -name "adp-site-metadata.json")
 
-          echo "✓ Copied $COUNT spec/data files"
+          echo "✓ Copied $COUNT spec/data/media files"
 
       - name: Fetch API endpoints
         run: |

@@ -188,7 +188,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: AdobeDocs/adp-devsite
-          ref: secure-private-config
+          ref: main
           path: adp-devsite
 
       - name: Clone devsite-runtime-connector

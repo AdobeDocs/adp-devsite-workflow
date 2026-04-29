@@ -209,6 +209,9 @@ jobs:
           cd ../devsite-runtime-connector && npm install
 
       - name: Start development servers
+        env:
+          DEVSITE_CONNECTOR_FLAG: 'true'
+          DEVSITE_CONNECTOR_PUBLIC_ORIGIN: ${{ needs.set-state.outputs.deploy_prod == 'true' && 'https://developer.adobe.com' || 'https://developer-stage.adobe.com' }}
         run: |
           ROOT_DIR=$(pwd)
           

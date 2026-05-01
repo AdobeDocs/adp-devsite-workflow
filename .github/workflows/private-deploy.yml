@@ -428,19 +428,27 @@ jobs:
           echo "::endgroup::"
 
           # The superhero.js expects <picture><img></picture> but we have plain <img>
-          # Wrap superhero images in <picture> elements so the background works
-          if [ -f "${SITE_PATH}/index.html" ]; then
-            echo "::group::Perl wrap on ${SITE_PATH}/index.html"
-            BEFORE=$(grep -o '<picture><img' "${SITE_PATH}/index.html" 2>/dev/null | wc -l | tr -d ' ')
-            echo "Count <picture><img before: ${BEFORE}"
-            perl -i -0pe 's|(<div class="superhero">.*?<div>\s*)<img ([^>]+)>(.*?</div>\s*</div>)|$1<picture><img $2></picture>$3|gs' "${SITE_PATH}/index.html"
-            AFTER=$(grep -o '<picture><img' "${SITE_PATH}/index.html" 2>/dev/null | wc -l | tr -d ' ')
-            echo "Count <picture><img after: ${AFTER}"
-            echo "✓ Superhero images wrapped in <picture> (${SITE_PATH}/index.html)"
-            echo "::endgroup::"
+          # Crawl writes the home page to index.html at _site root, not ${SITE_PATH}/index.html
+          # Wrap superhero images in <picture> on every static file that contains a superhero block
+          SH_PATTERN='class="superhero"'
+          SH_FILES=$(grep -rl "$SH_PATTERN" . 2>/dev/null || true)
+          if [ -z "$SH_FILES" ]; then
+            echo "○ No files under _site contain superhero — nothing to fix"
           else
-            echo "○ Skipped superhero HTML fix: file not found at ${SITE_PATH}/index.html"
-            echo "  (If the home page was crawled to index.html at _site root, use that path in this step.)"
+            echo "Files to process (contain superhero):"
+            echo "$SH_FILES" | sed 's/^/  - /'
+            echo "$SH_FILES" | while IFS= read -r f; do
+              [ -z "$f" ] && continue
+              [ -f "$f" ] || continue
+              echo "::group::Perl wrap on $f"
+              BEFORE=$(grep -o '<picture><img' "$f" 2>/dev/null | wc -l | tr -d ' ')
+              echo "Count <picture><img before: ${BEFORE}"
+              perl -i -0pe 's|(<div class="superhero">.*?<div>\s*)<img ([^>]+)>(.*?</div>\s*</div>)|$1<picture><img $2></picture>$3|gs' "$f"
+              AFTER=$(grep -o '<picture><img' "$f" 2>/dev/null | wc -l | tr -d ' ')
+              echo "Count <picture><img after: ${AFTER}"
+              echo "✓ Processed: $f"
+              echo "::endgroup::"
+            done
           fi
 
       - name: Add security headers

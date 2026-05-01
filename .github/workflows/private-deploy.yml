@@ -404,13 +404,43 @@ jobs:
       - name: Fix superhero block images
         run: |
           cd _site
-          
+          echo "::group::Fix superhero block images (diagnostics)"
+          echo "PWD=$(pwd)"
+          echo "SITE_PATH=${SITE_PATH}"
+          PRIMARY="${SITE_PATH}/index.html"
+          ROOT_INDEX="index.html"
+          echo "Primary target (workflow): ${PRIMARY}"
+          echo "Root crawl target (often actual home): ${ROOT_INDEX}"
+          if [ -f "${PRIMARY}" ]; then
+            echo "Primary exists: yes ($(wc -c < "${PRIMARY}" | tr -d ' ') bytes)"
+          else
+            echo "Primary exists: no"
+          fi
+          if [ -f "${ROOT_INDEX}" ]; then
+            echo "Root index.html exists: yes ($(wc -c < "${ROOT_INDEX}" | tr -d ' ') bytes)"
+          else
+            echo "Root index.html exists: no"
+          fi
+          echo "Superhero-related snippets in primary (if present):"
+          grep -n 'class="superhero"' "${PRIMARY}" 2>/dev/null | head -5 || echo "  (none or file missing)"
+          echo "Superhero-related snippets in root index (if present):"
+          grep -n 'class="superhero"' "${ROOT_INDEX}" 2>/dev/null | head -5 || echo "  (none or file missing)"
+          echo "::endgroup::"
+
           # The superhero.js expects <picture><img></picture> but we have plain <img>
           # Wrap superhero images in <picture> elements so the background works
           if [ -f "${SITE_PATH}/index.html" ]; then
-            # Find <img> tags in superhero blocks and wrap them in <picture>
+            echo "::group::Perl wrap on ${SITE_PATH}/index.html"
+            BEFORE=$(grep -o '<picture><img' "${SITE_PATH}/index.html" 2>/dev/null | wc -l | tr -d ' ')
+            echo "Count <picture><img before: ${BEFORE}"
             perl -i -0pe 's|(<div class="superhero">.*?<div>\s*)<img ([^>]+)>(.*?</div>\s*</div>)|$1<picture><img $2></picture>$3|gs' "${SITE_PATH}/index.html"
-            echo "✓ Superhero images wrapped in <picture>"
+            AFTER=$(grep -o '<picture><img' "${SITE_PATH}/index.html" 2>/dev/null | wc -l | tr -d ' ')
+            echo "Count <picture><img after: ${AFTER}"
+            echo "✓ Superhero images wrapped in <picture> (${SITE_PATH}/index.html)"
+            echo "::endgroup::"
+          else
+            echo "○ Skipped superhero HTML fix: file not found at ${SITE_PATH}/index.html"
+            echo "  (If the home page was crawled to index.html at _site root, use that path in this step.)"
           fi
 
       - name: Add security headers

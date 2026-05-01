@@ -28,10 +28,10 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Checkout adp-devsite-workflow for runner matrix
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: AdobeDocs/adp-devsite-workflow
           path: _workflow-config
@@ -67,7 +67,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Get pathPrefix
         id: get_path_prefix
@@ -163,7 +163,7 @@ jobs:
             return connectionString;
 
       - name: Checkout content repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.inputs.branch }}
           path: content
@@ -185,20 +185,20 @@ jobs:
           echo "✓ Site path validated: $SITE_PATH (prefix: $SITE_PREFIX)"
 
       - name: Clone adp-devsite
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: AdobeDocs/adp-devsite
           ref: main
           path: adp-devsite
 
       - name: Clone devsite-runtime-connector
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: aemsites/devsite-runtime-connector
           path: devsite-runtime-connector
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "lts/krypton"
 

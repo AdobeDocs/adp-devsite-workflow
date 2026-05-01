@@ -35,7 +35,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -72,14 +72,14 @@ jobs:
     if: needs.set-state.outputs.has_changed_files == 'true'
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v6
         with:
-          node-version: '18'
+          node-version: "lts/krypton"
           
       - name: Enable Corepack for Yarn v3
         run: |
@@ -99,7 +99,7 @@ jobs:
             ${{ runner.os }}-yarn-
 
       - name: Checkout Scripts Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: AdobeDocs/adp-devsite-scripts
           path: scripts

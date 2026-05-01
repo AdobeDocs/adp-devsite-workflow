@@ -38,10 +38,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
   
       - name: Checkout Scripts Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: AdobeDocs/adp-devsite-scripts
           path: scripts
@@ -115,10 +115,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Checkout Scripts Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: AdobeDocs/adp-devsite-scripts
           path: scripts

@@ -406,7 +406,9 @@ jobs:
           cd _site
           # superhero.js expects <picture><img>; crawl may emit plain <img>. Home page is often
           # _site/index.html (not ${SITE_PATH}/index.html). Fix every file under _site that contains the block.
-          SH_FILES=$(grep -rl 'class="superhero"' . 2>/dev/null || true)
+          # Match any div whose class list includes "superhero" (default, half-width, etc.); first bare <img>
+          # inside that open tag must not already follow <picture> (avoid double-wrap on re-run).
+          SH_FILES=$(grep -rl 'class="[^"]*superhero' . 2>/dev/null || true)
           if [ -z "$SH_FILES" ]; then
             echo "○ No superhero blocks in _site — skip"
           else
@@ -415,7 +417,7 @@ jobs:
             echo "$SH_FILES" | while IFS= read -r f; do
               [ -z "$f" ] && continue
               [ -f "$f" ] || continue
-              perl -i -0pe 's|(<div class="superhero">.*?<div>\s*)<img ([^>]+)>(.*?</div>\s*</div>)|$1<picture><img $2></picture>$3|gs' "$f"
+              perl -i -0pe 's|(<div\s+class="[^"]*\bsuperhero\b[^"]*"[^>]*>[\s\S]*?)(?<!<picture>)<img([^>]*)>|$1<picture><img$2></picture>|gs' "$f"
               echo "  ✓ $f"
             done
           fi

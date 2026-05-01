@@ -404,13 +404,21 @@ jobs:
       - name: Fix superhero block images
         run: |
           cd _site
-          
-          # The superhero.js expects <picture><img></picture> but we have plain <img>
-          # Wrap superhero images in <picture> elements so the background works
-          if [ -f "${SITE_PATH}/index.html" ]; then
-            # Find <img> tags in superhero blocks and wrap them in <picture>
-            perl -i -0pe 's|(<div class="superhero">.*?<div>\s*)<img ([^>]+)>(.*?</div>\s*</div>)|$1<picture><img $2></picture>$3|gs' "${SITE_PATH}/index.html"
-            echo "✓ Superhero images wrapped in <picture>"
+          # superhero.js expects <picture><img>; Fix every file under _site that contains the block.
+          # Match any div whose class list includes "superhero" (default, half-width, etc.); first bare <img>
+          # inside that open tag must not already follow <picture> (avoids double-wrapping)
+          SH_FILES=$(grep -rl 'class="[^"]*superhero' . 2>/dev/null || true)
+          if [ -z "$SH_FILES" ]; then
+            echo "No superhero blocks in _site — skip"
+          else
+            echo "Superhero HTML fix (wrap <img> in <picture>):"
+            echo "$SH_FILES" | sed 's/^/  /'
+            echo "$SH_FILES" | while IFS= read -r f; do
+              [ -z "$f" ] && continue
+              [ -f "$f" ] || continue
+              perl -i -0pe 's|(<div\s+class="[^"]*\bsuperhero\b[^"]*"[^>]*>[\s\S]*?)(?<!<picture>)<img([^>]*)>|$1<picture><img$2></picture>|gs' "$f"
+              echo "  ✓ $f"
+            done
           fi
 
       - name: Add security headers

@@ -404,13 +404,12 @@ jobs:
       - name: Fix superhero block images
         run: |
           cd _site
-          # superhero.js expects <picture><img>; crawl may emit plain <img>. Home page is often
-          # _site/index.html (not ${SITE_PATH}/index.html). Fix every file under _site that contains the block.
+          # superhero.js expects <picture><img>; Fix every file under _site that contains the block.
           # Match any div whose class list includes "superhero" (default, half-width, etc.); first bare <img>
-          # inside that open tag must not already follow <picture> (avoid double-wrap on re-run).
+          # inside that open tag must not already follow <picture> (avoids double-wrapping)
           SH_FILES=$(grep -rl 'class="[^"]*superhero' . 2>/dev/null || true)
           if [ -z "$SH_FILES" ]; then
-            echo "○ No superhero blocks in _site — skip"
+            echo "No superhero blocks in _site — skip"
           else
             echo "Superhero HTML fix (wrap <img> in <picture>):"
             echo "$SH_FILES" | sed 's/^/  /'

@@ -12,34 +12,57 @@ on:
       deployAll:
         type: boolean
         default: false
-    secrets:
-      AIO_AZURE_DEV_PRIVATE_CONNECTION_STRING:
-        required: false
-      AIO_AZURE_PROD_PRIVATE_CONNECTION_STRING:
-        required: false
-      AIO_FASTLY_TOKEN:
-        required: false
-      AIO_FASTLY_PROD_URL:
-        required: false
-      AIO_FASTLY_DEV_URL:
-        required: false
 
 jobs:
+  get-base-sha:
+    runs-on: ubuntu-latest
+    outputs:
+      base_sha: ${{ steps.last_successful_workflow_dispatch_run.outputs.base_sha }}
+    steps:
+      - name: Get last successful workflow_dispatch run
+        id: last_successful_workflow_dispatch_run
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const branch = context.ref.replace('refs/heads/', '');
+            const workflowId = '${{ contains(inputs.env, 'prod') && 'deploy-v2.yml' || 'stage-v2.yml' }}';
+            try {
+              const workflowRuns = await github.rest.actions.listWorkflowRuns({
+                owner,
+                repo,
+                workflow_id: workflowId,
+                branch: branch,
+                event: 'workflow_dispatch',
+                status: 'success',
+                per_page: 1,
+              });
+              if (workflowRuns.data.workflow_runs.length > 0) {
+                core.setOutput('base_sha', workflowRuns.data.workflow_runs[0].head_sha);
+              } else {
+                core.setOutput('base_sha', '');
+              }
+            } catch (error) {
+              console.log(`Error fetching workflow runs: ${error.message}`);
+              core.setOutput('base_sha', '');
+            }
+
   set-state:
-    if: github.repository_owner != 'AdobeDocsPrivate'
+    needs: [get-base-sha]
     runs-on: ubuntu-latest
     outputs:
       path_prefix: ${{ steps.get_path_prefix.outputs.path_prefix }}
       branch_short_ref: ${{ steps.get_branch.outputs.branch }}
       deploy_stage: ${{ contains(inputs.env, 'stage') }}
       deploy_prod: ${{ contains(inputs.env, 'prod') }}
-      base_Sha: ${{ inputs.baseSha }}
-      deploy_All: ${{ inputs.deployAll }}
+      base_sha: ${{ inputs.baseSha || needs.get-base-sha.outputs.base_sha }}
+      deploy_all: ${{ inputs.deployAll }}
+      has_app_secrets: ${{ secrets.ADP_DEVSITE_APP_ID != '' }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-  
+
       - name: Checkout Scripts Repo
         uses: actions/checkout@v6
         with:
@@ -70,7 +93,6 @@ jobs:
 
   echo-state:
     needs: [set-state]
-    if: github.repository_owner != 'AdobeDocsPrivate'
     runs-on: ubuntu-latest
     steps:
       - run: echo "Deploy to stage - ${{ needs.set-state.outputs.deploy_stage }}"
@@ -79,39 +101,26 @@ jobs:
       - run: echo "Repository org - ${{ github.event.repository.owner.login }}"
       - run: echo "Repository name - ${{ github.event.repository.name }}"
       - run: echo "Repository branch - ${{ needs.set-state.outputs.branch_short_ref }}"
-      - run: echo "Base Sha - ${{ needs.set-state.outputs.base_Sha }}"
-      - run: echo "Deploy All - ${{ needs.set-state.outputs.deploy_All }}"
+      - run: echo "Base Sha - ${{ needs.set-state.outputs.base_sha }}"
+      - run: echo "Deploy All - ${{ needs.set-state.outputs.deploy_all }}"
+      - run: echo "Has App Secrets - ${{ needs.set-state.outputs.has_app_secrets }}"
 
-  private-deployment-stg:
-    if: github.repository_owner == 'AdobeDocsPrivate' && contains(inputs.env, 'stage')
-    uses: ./.github/workflows/private-deploy.yml
-    secrets:
-      AIO_AZURE_DEV_PRIVATE_CONNECTION_STRING: ${{ secrets.AIO_AZURE_DEV_PRIVATE_CONNECTION_STRING }}
-      AIO_AZURE_PROD_PRIVATE_CONNECTION_STRING: ${{ secrets.AIO_AZURE_PROD_PRIVATE_CONNECTION_STRING }}
-      AIO_FASTLY_TOKEN: ${{ secrets.AIO_FASTLY_TOKEN }}
-      AIO_FASTLY_PROD_URL: ${{ secrets.AIO_FASTLY_PROD_URL }}
-      AIO_FASTLY_DEV_URL: ${{ secrets.AIO_FASTLY_DEV_URL }}
+  build-auto-generated-files:
+    name: Build Auto-Generated Files
+    needs: [set-state]
+    if: github.repository != 'AdobeDocs/dev-docs-template' && needs.set-state.outputs.has_app_secrets == 'true'
+    uses: ./.github/workflows/build-auto-generated-files-v2.yml
     with:
-      env: stg
-
-  private-deployment-prod:
-    if: github.repository_owner == 'AdobeDocsPrivate' && contains(inputs.env, 'prod')
-    uses: ./.github/workflows/private-deploy.yml
-    secrets:
-      AIO_AZURE_DEV_PRIVATE_CONNECTION_STRING: ${{ secrets.AIO_AZURE_DEV_PRIVATE_CONNECTION_STRING }}
-      AIO_AZURE_PROD_PRIVATE_CONNECTION_STRING: ${{ secrets.AIO_AZURE_PROD_PRIVATE_CONNECTION_STRING }}
-      AIO_FASTLY_TOKEN: ${{ secrets.AIO_FASTLY_TOKEN }}
-      AIO_FASTLY_PROD_URL: ${{ secrets.AIO_FASTLY_PROD_URL }}
-      AIO_FASTLY_DEV_URL: ${{ secrets.AIO_FASTLY_DEV_URL }}
-    with:
-      env: prod
+      baseSha: ${{ needs.set-state.outputs.base_sha }}
+      buildAll: ${{ inputs.deployAll }}
+    secrets: inherit
 
   deploy:
     defaults:
       run:
         shell: bash
-    needs: [set-state]
-    if: github.repository_owner != 'AdobeDocsPrivate'
+    needs: [set-state, build-auto-generated-files]
+    if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -124,45 +133,15 @@ jobs:
           path: scripts
           ref: main
 
-      - name: Get last successful workflow_dispatch run
-        id: last_successful_workflow_dispatch_run
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const { owner, repo } = context.repo;
-            const branch = '${{ needs.set-state.outputs.branch_short_ref }}';
-            const workflowId = '${{ needs.set-state.outputs.deploy_prod == 'true' && 'deploy.yml' || 'stage.yml' }}';
+      - name: Pull auto-generated file commits
+        run: git pull
 
-            try {
-              const workflowRuns = await github.rest.actions.listWorkflowRuns({
-                owner,
-                repo,
-                workflow_id: workflowId,
-                branch: branch,
-                event: 'workflow_dispatch',
-                status: 'success',
-                per_page: 1, // Only need the latest one
-              });
-
-              if (workflowRuns.data.workflow_runs.length > 0) {
-                const lastSuccessfulRun = workflowRuns.data.workflow_runs[0];
-                console.log(`Last successful workflow_dispatch run on branch '${branch}':`);
-                console.log(`ID: ${lastSuccessfulRun.id}`);
-                console.log(`Commit SHA: ${lastSuccessfulRun.head_sha}`);
-                console.log(`Run URL: ${lastSuccessfulRun.html_url}`);
-                core.setOutput('base', lastSuccessfulRun.head_sha);
-              } else {
-                console.log(`No successful workflow_dispatch runs found on branch '${branch}' for workflow '${workflowId}'.`);
-                core.setOutput('base', '');
-              }
-            } catch (error) {
-              console.log(`Error fetching workflow runs: ${error.message}`);
-              console.log(`Workflow '${workflowId}' may not exist in this repository. Defaulting base to empty string.`);
-              core.setOutput('base', '');
-            }
+      - name: Get head SHA
+        id: get-head-sha
+        run: echo "head_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Get changed files in the src/pages folder
-        if: needs.set-state.outputs.deploy_All == 'false'
+        if: needs.set-state.outputs.deploy_all == 'false'
         id: changed-files-specific
         uses: tj-actions/changed-files@v46.0.5
         with:
@@ -170,10 +149,11 @@ jobs:
           escape_json: false
           files: |
             src/pages/**
-          base_sha: ${{ needs.set-state.outputs.base_Sha || steps.last_successful_workflow_dispatch_run.outputs.base }}
+          sha: ${{ steps.get-head-sha.outputs.head_sha }}
+          base_sha: ${{ needs.set-state.outputs.base_sha }}
 
       - name: Get all files from src/pages folder
-        if: needs.set-state.outputs.deploy_All == 'true'
+        if: needs.set-state.outputs.deploy_all == 'true'
         id: all-files
         uses: actions/github-script@v7
         with:
@@ -185,8 +165,8 @@ jobs:
             const srcFilesFixedPaths = [];
             srcFiles.forEach((path) => {
               let pathSplitter = path.split(`${{ github.event.repository.name }}/src/pages`);
-              if(pathSplitter.length > 1){
-                  srcFilesFixedPaths.push(`src/pages${pathSplitter[1]}`)
+              if (pathSplitter.length > 1) {
+                srcFilesFixedPaths.push(`src/pages${pathSplitter[1]}`);
               }
             });
 
@@ -194,7 +174,7 @@ jobs:
             core.setOutput('all_files', serializedAllFiles);
 
       - name: Deploy only changed files to stage
-        if: needs.set-state.outputs.deploy_stage == 'true' && steps.changed-files-specific.outputs.any_modified == 'true' && needs.set-state.outputs.deploy_All == 'false'
+        if: needs.set-state.outputs.deploy_stage == 'true' && steps.changed-files-specific.outputs.any_modified == 'true' && needs.set-state.outputs.deploy_all == 'false'
         uses: actions/github-script@v7
         with:
           script: |
@@ -211,7 +191,7 @@ jobs:
             });
 
       - name: Force deploy all files to stage
-        if: needs.set-state.outputs.deploy_stage == 'true' && needs.set-state.outputs.deploy_All == 'true'
+        if: needs.set-state.outputs.deploy_stage == 'true' && needs.set-state.outputs.deploy_all == 'true'
         uses: actions/github-script@v7
         with:
           script: |
@@ -233,7 +213,7 @@ jobs:
         shell: bash
 
       - name: Clean cache on only changed files on stage
-        if: needs.set-state.outputs.deploy_stage == 'true' && steps.changed-files-specific.outputs.any_modified == 'true' && needs.set-state.outputs.deploy_All == 'false'
+        if: needs.set-state.outputs.deploy_stage == 'true' && steps.changed-files-specific.outputs.any_modified == 'true' && needs.set-state.outputs.deploy_all == 'false'
         uses: actions/github-script@v7
         with:
           script: |
@@ -250,7 +230,7 @@ jobs:
             });
 
       - name: Clean cache on all files on stage
-        if: needs.set-state.outputs.deploy_stage == 'true' && needs.set-state.outputs.deploy_All == 'true'
+        if: needs.set-state.outputs.deploy_stage == 'true' && needs.set-state.outputs.deploy_all == 'true'
         uses: actions/github-script@v7
         with:
           script: |
@@ -267,7 +247,7 @@ jobs:
             });
 
       - name: Deploy only changed files to prod (Step 1 of 2)
-        if: needs.set-state.outputs.deploy_prod == 'true' && steps.changed-files-specific.outputs.any_modified == 'true' && needs.set-state.outputs.deploy_All == 'false'
+        if: needs.set-state.outputs.deploy_prod == 'true' && steps.changed-files-specific.outputs.any_modified == 'true' && needs.set-state.outputs.deploy_all == 'false'
         uses: actions/github-script@v7
         with:
           script: |
@@ -284,7 +264,7 @@ jobs:
             });
 
       - name: Force deploy all files to prod (Step 1 of 2)
-        if: needs.set-state.outputs.deploy_prod == 'true' && needs.set-state.outputs.deploy_All == 'true'
+        if: needs.set-state.outputs.deploy_prod == 'true' && needs.set-state.outputs.deploy_all == 'true'
         uses: actions/github-script@v7
         with:
           script: |
@@ -306,7 +286,7 @@ jobs:
         shell: bash
 
       - name: Deploy only changed files to prod (Step 2 of 2)
-        if: needs.set-state.outputs.deploy_prod == 'true' && steps.changed-files-specific.outputs.any_modified == 'true' && needs.set-state.outputs.deploy_All == 'false'
+        if: needs.set-state.outputs.deploy_prod == 'true' && steps.changed-files-specific.outputs.any_modified == 'true' && needs.set-state.outputs.deploy_all == 'false'
         uses: actions/github-script@v7
         with:
           script: |
@@ -323,7 +303,7 @@ jobs:
             });
 
       - name: Force deploy all files to prod (Step 2 of 2)
-        if: needs.set-state.outputs.deploy_prod == 'true' && needs.set-state.outputs.deploy_All == 'true'
+        if: needs.set-state.outputs.deploy_prod == 'true' && needs.set-state.outputs.deploy_all == 'true'
         uses: actions/github-script@v7
         with:
           script: |
@@ -345,7 +325,7 @@ jobs:
         shell: bash
 
       - name: Clean cache on only changed files on prod
-        if: needs.set-state.outputs.deploy_prod == 'true' && steps.changed-files-specific.outputs.any_modified == 'true' && needs.set-state.outputs.deploy_All == 'false'
+        if: needs.set-state.outputs.deploy_prod == 'true' && steps.changed-files-specific.outputs.any_modified == 'true' && needs.set-state.outputs.deploy_all == 'false'
         uses: actions/github-script@v7
         with:
           script: |
@@ -372,7 +352,7 @@ jobs:
             });
 
       - name: Clean cache on all files on prod
-        if: needs.set-state.outputs.deploy_prod == 'true' && needs.set-state.outputs.deploy_All == 'true'
+        if: needs.set-state.outputs.deploy_prod == 'true' && needs.set-state.outputs.deploy_all == 'true'
         uses: actions/github-script@v7
         with:
           script: |

@@ -1,0 +1,379 @@
+---
+name: Deployment
+on:
+  workflow_call:
+    inputs:
+      env:
+        required: true
+        type: string
+      baseSha:
+        type: string
+        required: false
+      deployAll:
+        type: boolean
+        default: false
+
+jobs:
+  get-base-sha:
+    runs-on: ubuntu-latest
+    outputs:
+      base_sha: ${{ steps.last_successful_workflow_dispatch_run.outputs.base_sha }}
+    steps:
+      - name: Get last successful workflow_dispatch run
+        id: last_successful_workflow_dispatch_run
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const branch = context.ref.replace('refs/heads/', '');
+            const workflowId = '${{ contains(inputs.env, 'prod') && 'deploy-v2.yml' || 'stage-v2.yml' }}';
+            try {
+              const workflowRuns = await github.rest.actions.listWorkflowRuns({
+                owner,
+                repo,
+                workflow_id: workflowId,
+                branch: branch,
+                event: 'workflow_dispatch',
+                status: 'success',
+                per_page: 1,
+              });
+              if (workflowRuns.data.workflow_runs.length > 0) {
+                core.setOutput('base_sha', workflowRuns.data.workflow_runs[0].head_sha);
+              } else {
+                core.setOutput('base_sha', '');
+              }
+            } catch (error) {
+              console.log(`Error fetching workflow runs: ${error.message}`);
+              core.setOutput('base_sha', '');
+            }
+
+  set-state:
+    needs: [get-base-sha]
+    runs-on: ubuntu-latest
+    outputs:
+      path_prefix: ${{ steps.get_path_prefix.outputs.path_prefix }}
+      branch_short_ref: ${{ steps.get_branch.outputs.branch }}
+      deploy_stage: ${{ contains(inputs.env, 'stage') }}
+      deploy_prod: ${{ contains(inputs.env, 'prod') }}
+      base_sha: ${{ inputs.baseSha || needs.get-base-sha.outputs.base_sha }}
+      deploy_all: ${{ inputs.deployAll }}
+      has_app_secrets: ${{ secrets.ADP_DEVSITE_APP_ID != '' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Checkout Scripts Repo
+        uses: actions/checkout@v6
+        with:
+          repository: AdobeDocs/adp-devsite-scripts
+          path: scripts
+          ref: main
+
+      - name: Get path prefix
+        uses: actions/github-script@v7
+        id: get_path_prefix
+        with:
+          script: |
+            const script = require('./scripts/get-path-prefix.js');
+            script({ core, isStage:"${{ contains(inputs.env, 'stage') }}", isProd:"${{ contains(inputs.env, 'prod') }}" });
+          result-encoding: string
+
+      - name: Get branch name
+        shell: bash
+        run: echo "branch=${GITHUB_REF#refs/heads/}" >> "$GITHUB_OUTPUT"
+        id: get_branch
+
+      - name: Validate branch name
+        if: contains(steps.get_branch.outputs.branch, '/')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.setFailed("Branch name '${{ steps.get_branch.outputs.branch }}' contains a slash (/), which is not supported by EDS. Please rename your branch to remove the slash and try again.");
+
+  echo-state:
+    needs: [set-state]
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Deploy to stage - ${{ needs.set-state.outputs.deploy_stage }}"
+      - run: echo "Deploy to prod - ${{ needs.set-state.outputs.deploy_prod }}"
+      - run: echo "Path prefix - ${{ needs.set-state.outputs.path_prefix }}"
+      - run: echo "Repository org - ${{ github.event.repository.owner.login }}"
+      - run: echo "Repository name - ${{ github.event.repository.name }}"
+      - run: echo "Repository branch - ${{ needs.set-state.outputs.branch_short_ref }}"
+      - run: echo "Base Sha - ${{ needs.set-state.outputs.base_sha }}"
+      - run: echo "Deploy All - ${{ needs.set-state.outputs.deploy_all }}"
+      - run: echo "Has App Secrets - ${{ needs.set-state.outputs.has_app_secrets }}"
+
+  build-auto-generated-files:
+    name: Build Auto-Generated Files
+    needs: [set-state]
+    if: github.repository != 'AdobeDocs/dev-docs-template' && needs.set-state.outputs.has_app_secrets == 'true'
+    uses: ./.github/workflows/build-auto-generated-files-v2.yml
+    with:
+      baseSha: ${{ needs.set-state.outputs.base_sha }}
+      buildAll: ${{ inputs.deployAll }}
+    secrets: inherit
+
+  deploy:
+    defaults:
+      run:
+        shell: bash
+    needs: [set-state, build-auto-generated-files]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Checkout Scripts Repo
+        uses: actions/checkout@v6
+        with:
+          repository: AdobeDocs/adp-devsite-scripts
+          path: scripts
+          ref: main
+
+      - name: Pull auto-generated file commits
+        run: git pull
+
+      - name: Get head SHA
+        id: get-head-sha
+        run: echo "head_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Get changed files in the src/pages folder
+        if: needs.set-state.outputs.deploy_all == 'false'
+        id: changed-files-specific
+        uses: tj-actions/changed-files@v46.0.5
+        with:
+          json: true
+          escape_json: false
+          files: |
+            src/pages/**
+          sha: ${{ steps.get-head-sha.outputs.head_sha }}
+          base_sha: ${{ needs.set-state.outputs.base_sha }}
+
+      - name: Get all files from src/pages folder
+        if: needs.set-state.outputs.deploy_all == 'true'
+        id: all-files
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const patterns = ['src/pages/**/*.*'];
+            const globberSrcFiles = await glob.create(patterns[0]);
+            const srcFiles = await globberSrcFiles.glob();
+
+            const srcFilesFixedPaths = [];
+            srcFiles.forEach((path) => {
+              let pathSplitter = path.split(`${{ github.event.repository.name }}/src/pages`);
+              if (pathSplitter.length > 1) {
+                srcFilesFixedPaths.push(`src/pages${pathSplitter[1]}`);
+              }
+            });
+
+            const serializedAllFiles = JSON.stringify(srcFilesFixedPaths);
+            core.setOutput('all_files', serializedAllFiles);
+
+      - name: Deploy only changed files to stage
+        if: needs.set-state.outputs.deploy_stage == 'true' && steps.changed-files-specific.outputs.any_modified == 'true' && needs.set-state.outputs.deploy_all == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const script = require('./scripts/deploy.js');
+
+            await script({
+              core,
+              changes: ${{ steps.changed-files-specific.outputs.all_changed_files }},
+              deletions: ${{ steps.changed-files-specific.outputs.deleted_files }},
+              operation: "preview",
+              siteEnv: "stage",
+              branch: "${{ needs.set-state.outputs.branch_short_ref }}",
+              pathPrefix: "${{ needs.set-state.outputs.path_prefix }}"
+            });
+
+      - name: Force deploy all files to stage
+        if: needs.set-state.outputs.deploy_stage == 'true' && needs.set-state.outputs.deploy_all == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const script = require('./scripts/deploy.js');
+
+            await script({
+              core,
+              changes: ${{ steps.all-files.outputs.all_files }},
+              deletions: [],
+              operation: "preview",
+              siteEnv: "stage",
+              branch: "${{ needs.set-state.outputs.branch_short_ref }}",
+              pathPrefix: "${{ needs.set-state.outputs.path_prefix }}"
+            });
+
+      - name: Sleep for 30 seconds before cleaning stage cache
+        if: needs.set-state.outputs.deploy_stage == 'true'
+        run: sleep 30s
+        shell: bash
+
+      - name: Clean cache on only changed files on stage
+        if: needs.set-state.outputs.deploy_stage == 'true' && steps.changed-files-specific.outputs.any_modified == 'true' && needs.set-state.outputs.deploy_all == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const script = require('./scripts/deploy.js');
+
+            await script({
+              core,
+              changes: ${{ steps.changed-files-specific.outputs.all_changed_files }},
+              deletions: ${{ steps.changed-files-specific.outputs.deleted_files }},
+              operation: "cache",
+              siteEnv: "stage",
+              branch: "${{ needs.set-state.outputs.branch_short_ref }}",
+              pathPrefix: "${{ needs.set-state.outputs.path_prefix }}"
+            });
+
+      - name: Clean cache on all files on stage
+        if: needs.set-state.outputs.deploy_stage == 'true' && needs.set-state.outputs.deploy_all == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const script = require('./scripts/deploy.js');
+
+            await script({
+              core,
+              changes: ${{ steps.all-files.outputs.all_files }},
+              deletions: [],
+              operation: "cache",
+              siteEnv: "stage",
+              branch: "${{ needs.set-state.outputs.branch_short_ref }}",
+              pathPrefix: "${{ needs.set-state.outputs.path_prefix }}"
+            });
+
+      - name: Deploy only changed files to prod (Step 1 of 2)
+        if: needs.set-state.outputs.deploy_prod == 'true' && steps.changed-files-specific.outputs.any_modified == 'true' && needs.set-state.outputs.deploy_all == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const script = require('./scripts/deploy.js');
+
+            await script({
+              core,
+              changes: ${{ steps.changed-files-specific.outputs.all_changed_files }},
+              deletions: ${{ steps.changed-files-specific.outputs.deleted_files }},
+              operation: "preview",
+              siteEnv: "prod",
+              branch: "${{ needs.set-state.outputs.branch_short_ref }}",
+              pathPrefix: "${{ needs.set-state.outputs.path_prefix }}"
+            });
+
+      - name: Force deploy all files to prod (Step 1 of 2)
+        if: needs.set-state.outputs.deploy_prod == 'true' && needs.set-state.outputs.deploy_all == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const script = require('./scripts/deploy.js');
+
+            await script({
+              core,
+              changes: ${{ steps.all-files.outputs.all_files }},
+              deletions: [],
+              operation: "preview",
+              siteEnv: "prod",
+              branch: "${{ needs.set-state.outputs.branch_short_ref }}",
+              pathPrefix: "${{ needs.set-state.outputs.path_prefix }}"
+            });
+
+      - name: Sleep for 60 seconds before living on prod
+        if: needs.set-state.outputs.deploy_prod == 'true'
+        run: sleep 60s
+        shell: bash
+
+      - name: Deploy only changed files to prod (Step 2 of 2)
+        if: needs.set-state.outputs.deploy_prod == 'true' && steps.changed-files-specific.outputs.any_modified == 'true' && needs.set-state.outputs.deploy_all == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const script = require('./scripts/deploy.js');
+
+            await script({
+              core,
+              changes: ${{ steps.changed-files-specific.outputs.all_changed_files }},
+              deletions: ${{ steps.changed-files-specific.outputs.deleted_files }},
+              operation: "live",
+              siteEnv: "prod",
+              branch: "${{ needs.set-state.outputs.branch_short_ref }}",
+              pathPrefix: "${{ needs.set-state.outputs.path_prefix }}"
+            });
+
+      - name: Force deploy all files to prod (Step 2 of 2)
+        if: needs.set-state.outputs.deploy_prod == 'true' && needs.set-state.outputs.deploy_all == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const script = require('./scripts/deploy.js');
+
+            await script({
+              core,
+              changes: ${{ steps.all-files.outputs.all_files }},
+              deletions: [],
+              operation: "live",
+              siteEnv: "prod",
+              branch: "${{ needs.set-state.outputs.branch_short_ref }}",
+              pathPrefix: "${{ needs.set-state.outputs.path_prefix }}"
+            });
+
+      - name: Sleep for 30 seconds before cleaning prod cache
+        if: needs.set-state.outputs.deploy_prod == 'true'
+        run: sleep 30s
+        shell: bash
+
+      - name: Clean cache on only changed files on prod
+        if: needs.set-state.outputs.deploy_prod == 'true' && steps.changed-files-specific.outputs.any_modified == 'true' && needs.set-state.outputs.deploy_all == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const script = require('./scripts/deploy.js');
+
+            await script({
+              core,
+              changes: ${{ steps.changed-files-specific.outputs.all_changed_files }},
+              deletions: ${{ steps.changed-files-specific.outputs.deleted_files }},
+              operation: "cache",
+              siteEnv: "stage",
+              branch: "${{ needs.set-state.outputs.branch_short_ref }}",
+              pathPrefix: "${{ needs.set-state.outputs.path_prefix }}"
+            });
+
+            await script({
+              core,
+              changes: ${{ steps.changed-files-specific.outputs.all_changed_files }},
+              deletions: ${{ steps.changed-files-specific.outputs.deleted_files }},
+              operation: "cache",
+              siteEnv: "prod",
+              branch: "${{ needs.set-state.outputs.branch_short_ref }}",
+              pathPrefix: "${{ needs.set-state.outputs.path_prefix }}"
+            });
+
+      - name: Clean cache on all files on prod
+        if: needs.set-state.outputs.deploy_prod == 'true' && needs.set-state.outputs.deploy_all == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const script = require('./scripts/deploy.js');
+
+            await script({
+              core,
+              changes: ${{ steps.all-files.outputs.all_files }},
+              deletions: [],
+              operation: "cache",
+              siteEnv: "stage",
+              branch: "${{ needs.set-state.outputs.branch_short_ref }}",
+              pathPrefix: "${{ needs.set-state.outputs.path_prefix }}"
+            });
+
+            await script({
+              core,
+              changes: ${{ steps.all-files.outputs.all_files }},
+              deletions: [],
+              operation: "cache",
+              siteEnv: "prod",
+              branch: "${{ needs.set-state.outputs.branch_short_ref }}",
+              pathPrefix: "${{ needs.set-state.outputs.path_prefix }}"
+            });

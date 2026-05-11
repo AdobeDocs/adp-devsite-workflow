@@ -111,7 +111,7 @@ jobs:
           ref: main
 
       - name: Get path prefix
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         id: get_path_prefix
         with:
           script: |

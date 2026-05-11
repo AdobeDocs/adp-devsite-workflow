@@ -48,7 +48,7 @@ jobs:
           ref: main
 
       - name: Get path prefix
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         id: get_path_prefix
         with:
           script: |
@@ -63,7 +63,7 @@ jobs:
 
       - name: Validate branch name
         if: contains(steps.get_branch.outputs.branch, '/')
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             core.setFailed("Branch name '${{ steps.get_branch.outputs.branch }}' contains a slash (/), which is not supported by EDS. Please rename your branch to remove the slash and try again.");
@@ -126,7 +126,7 @@ jobs:
 
       - name: Get last successful workflow_dispatch run
         id: last_successful_workflow_dispatch_run
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const { owner, repo } = context.repo;
@@ -175,7 +175,7 @@ jobs:
       - name: Get all files from src/pages folder
         if: needs.set-state.outputs.deploy_All == 'true'
         id: all-files
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const patterns = ['src/pages/**/*.*'];
@@ -195,7 +195,7 @@ jobs:
 
       - name: Deploy only changed files to stage
         if: needs.set-state.outputs.deploy_stage == 'true' && steps.changed-files-specific.outputs.any_modified == 'true' && needs.set-state.outputs.deploy_All == 'false'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const script = require('./scripts/deploy.js');
@@ -212,7 +212,7 @@ jobs:
 
       - name: Force deploy all files to stage
         if: needs.set-state.outputs.deploy_stage == 'true' && needs.set-state.outputs.deploy_All == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const script = require('./scripts/deploy.js');
@@ -234,7 +234,7 @@ jobs:
 
       - name: Clean cache on only changed files on stage
         if: needs.set-state.outputs.deploy_stage == 'true' && steps.changed-files-specific.outputs.any_modified == 'true' && needs.set-state.outputs.deploy_All == 'false'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const script = require('./scripts/deploy.js');
@@ -251,7 +251,7 @@ jobs:
 
       - name: Clean cache on all files on stage
         if: needs.set-state.outputs.deploy_stage == 'true' && needs.set-state.outputs.deploy_All == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const script = require('./scripts/deploy.js');
@@ -268,7 +268,7 @@ jobs:
 
       - name: Deploy only changed files to prod (Step 1 of 2)
         if: needs.set-state.outputs.deploy_prod == 'true' && steps.changed-files-specific.outputs.any_modified == 'true' && needs.set-state.outputs.deploy_All == 'false'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const script = require('./scripts/deploy.js');
@@ -285,7 +285,7 @@ jobs:
 
       - name: Force deploy all files to prod (Step 1 of 2)
         if: needs.set-state.outputs.deploy_prod == 'true' && needs.set-state.outputs.deploy_All == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const script = require('./scripts/deploy.js');
@@ -307,7 +307,7 @@ jobs:
 
       - name: Deploy only changed files to prod (Step 2 of 2)
         if: needs.set-state.outputs.deploy_prod == 'true' && steps.changed-files-specific.outputs.any_modified == 'true' && needs.set-state.outputs.deploy_All == 'false'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const script = require('./scripts/deploy.js');
@@ -324,7 +324,7 @@ jobs:
 
       - name: Force deploy all files to prod (Step 2 of 2)
         if: needs.set-state.outputs.deploy_prod == 'true' && needs.set-state.outputs.deploy_All == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const script = require('./scripts/deploy.js');
@@ -346,7 +346,7 @@ jobs:
 
       - name: Clean cache on only changed files on prod
         if: needs.set-state.outputs.deploy_prod == 'true' && steps.changed-files-specific.outputs.any_modified == 'true' && needs.set-state.outputs.deploy_All == 'false'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const script = require('./scripts/deploy.js');
@@ -373,7 +373,7 @@ jobs:
 
       - name: Clean cache on all files on prod
         if: needs.set-state.outputs.deploy_prod == 'true' && needs.set-state.outputs.deploy_All == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const script = require('./scripts/deploy.js');

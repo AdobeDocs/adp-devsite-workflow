@@ -124,7 +124,7 @@ jobs:
           base_sha: ${{ needs.set-state.outputs.base_Sha }}
 
       - name: Fetch content for changed files
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const script = require('./scripts/process-changed-files-scripts.js');
@@ -143,7 +143,7 @@ jobs:
             });
 
       - name: Run AI metadata generation script
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const script = require('./scripts/ai-scripts.js');
@@ -156,7 +156,7 @@ jobs:
             });
 
       - name: Create PR with generated metadata
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const script = require('./scripts/create-pr-scripts.js');

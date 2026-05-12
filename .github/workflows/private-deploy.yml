@@ -141,7 +141,7 @@ jobs:
     steps:
       - name: Select Connection String
         id: select_connection_string
-        uses: actions/github-script@v6
+        uses: actions/github-script@v8
         env:
           AIO_AZURE_DEV_PRIVATE_CONNECTION_STRING: ${{ secrets.AIO_AZURE_DEV_PRIVATE_CONNECTION_STRING }}
           AIO_AZURE_PROD_PRIVATE_CONNECTION_STRING: ${{ secrets.AIO_AZURE_PROD_PRIVATE_CONNECTION_STRING }}

@@ -26,7 +26,8 @@ jobs:
           script: |
             const { owner, repo } = context.repo;
             const branch = context.ref.replace('refs/heads/', '');
-            const workflowId = '${{ contains(inputs.env, 'prod') && 'deploy-v2.yml' || 'stage-v2.yml' }}';
+            // Consumer repos using v2 still name their caller files deploy.yml / stage.yml — they just point to deploy-v2.yml
+            const workflowId = '${{ contains(inputs.env, 'prod') && 'deploy.yml' || 'stage.yml' }}';
             try {
               const workflowRuns = await github.rest.actions.listWorkflowRuns({
                 owner,
@@ -125,6 +126,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Checkout Scripts Repo
         uses: actions/checkout@v6

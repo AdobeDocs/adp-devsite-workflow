@@ -124,8 +124,8 @@ jobs:
           path: scripts
           ref: main
 
-      - name: Get last successful workflow_dispatch run
-        id: last_successful_workflow_dispatch_run
+      - name: Get last successful deploy
+        id: last-successful-deploy
         uses: actions/github-script@v8
         with:
           script: |
@@ -139,20 +139,19 @@ jobs:
                 repo,
                 workflow_id: workflowId,
                 branch: branch,
-                event: 'workflow_dispatch',
                 status: 'success',
                 per_page: 1, // Only need the latest one
               });
 
               if (workflowRuns.data.workflow_runs.length > 0) {
                 const lastSuccessfulRun = workflowRuns.data.workflow_runs[0];
-                console.log(`Last successful workflow_dispatch run on branch '${branch}':`);
+                console.log(`Last successful deploy on branch '${branch}':`);
                 console.log(`ID: ${lastSuccessfulRun.id}`);
                 console.log(`Commit SHA: ${lastSuccessfulRun.head_sha}`);
                 console.log(`Run URL: ${lastSuccessfulRun.html_url}`);
                 core.setOutput('base', lastSuccessfulRun.head_sha);
               } else {
-                console.log(`No successful workflow_dispatch runs found on branch '${branch}' for workflow '${workflowId}'.`);
+                console.log(`No successful deploys found on branch '${branch}' for workflow '${workflowId}'.`);
                 core.setOutput('base', '');
               }
             } catch (error) {
@@ -160,6 +159,14 @@ jobs:
               console.log(`Workflow '${workflowId}' may not exist in this repository. Defaulting base to empty string.`);
               core.setOutput('base', '');
             }
+
+      - name: Resolve base SHA
+        id: resolve-base-sha
+        run: echo "sha=${{ needs.set-state.outputs.base_Sha || steps.last-successful-deploy.outputs.base }}" >> "$GITHUB_OUTPUT"
+
+      - name: Unshallow repository
+        if: needs.set-state.outputs.deploy_All == 'false' && steps.resolve-base-sha.outputs.sha != ''
+        run: git fetch --unshallow 2>/dev/null || true
 
       - name: Get changed files in the src/pages folder
         if: needs.set-state.outputs.deploy_All == 'false'
@@ -170,7 +177,7 @@ jobs:
           escape_json: false
           files: |
             src/pages/**
-          base_sha: ${{ needs.set-state.outputs.base_Sha || steps.last_successful_workflow_dispatch_run.outputs.base }}
+          base_sha: ${{ steps.resolve-base-sha.outputs.sha }}
 
       - name: Get all files from src/pages folder
         if: needs.set-state.outputs.deploy_All == 'true'

@@ -17,10 +17,10 @@ jobs:
   get-base-sha:
     runs-on: ubuntu-latest
     outputs:
-      base_sha: ${{ steps.last_successful_workflow_dispatch_run.outputs.base_sha }}
+      base_sha: ${{ steps.last-successful-deploy.outputs.base_sha }}
     steps:
-      - name: Get last successful workflow_dispatch run
-        id: last_successful_workflow_dispatch_run
+      - name: Get last successful deploy
+        id: last-successful-deploy
         uses: actions/github-script@v8
         with:
           script: |
@@ -34,7 +34,6 @@ jobs:
                 repo,
                 workflow_id: workflowId,
                 branch: branch,
-                event: 'workflow_dispatch',
                 status: 'success',
                 per_page: 1,
               });
@@ -140,6 +139,10 @@ jobs:
       - name: Get head SHA
         id: get-head-sha
         run: echo "head_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Unshallow repository
+        if: needs.set-state.outputs.deploy_all == 'false' && needs.set-state.outputs.base_sha != ''
+        run: git fetch --unshallow 2>/dev/null || true
 
       - name: Get changed files in the src/pages folder
         if: needs.set-state.outputs.deploy_all == 'false'

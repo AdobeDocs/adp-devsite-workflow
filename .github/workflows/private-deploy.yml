@@ -487,7 +487,7 @@ jobs:
           echo "✓ Build verification passed"
  
       - name: Deploy to Azure
-        uses: AdobeDocs/static-website-deploy@private-eds
+        uses: AdobeDocs/static-website-deploy@master
         with:
           enabled-static-website: "true"
           source: "_site"

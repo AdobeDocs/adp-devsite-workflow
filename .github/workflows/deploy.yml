@@ -164,12 +164,26 @@ jobs:
         id: resolve-base-sha
         run: echo "sha=${{ needs.set-state.outputs.base_Sha || steps.last-successful-deploy.outputs.base }}" >> "$GITHUB_OUTPUT"
 
-      - name: Unshallow repository
+      - name: Detect identical base and HEAD SHAs
+        id: check-sha-diff
         if: needs.set-state.outputs.deploy_All == 'false' && steps.resolve-base-sha.outputs.sha != ''
+        run: |
+          BASE="${{ steps.resolve-base-sha.outputs.sha }}"
+          HEAD=$(git rev-parse HEAD)
+          echo "Base SHA - $BASE"
+          echo "Head SHA - $HEAD"
+          if [ "$BASE" = "$HEAD" ]; then
+            echo "base_equals_head=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_equals_head=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Unshallow repository
+        if: needs.set-state.outputs.deploy_All == 'false' && steps.resolve-base-sha.outputs.sha != '' && steps.check-sha-diff.outputs.base_equals_head != 'true'
         run: git fetch --unshallow 2>/dev/null || true
 
       - name: Get changed files in the src/pages folder
-        if: needs.set-state.outputs.deploy_All == 'false'
+        if: needs.set-state.outputs.deploy_All == 'false' && steps.check-sha-diff.outputs.base_equals_head != 'true'
         id: changed-files-specific
         uses: tj-actions/changed-files@v46.0.5
         with:

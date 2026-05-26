@@ -58,12 +58,21 @@ jobs:
     needs: [set-state]
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Target branch - ${{ needs.set-state.outputs.target_branch }}"
-      - run: echo "Repository org - ${{ github.event.repository.owner.login }}"
-      - run: echo "Repository name - ${{ github.event.repository.name }}"
-      - run: echo "Repository branch - ${{ needs.set-state.outputs.branch_short_ref }}"
-      - run: echo "Base Sha - ${{ needs.set-state.outputs.base_Sha }}"
-      - run: echo "Has changed files - ${{ needs.set-state.outputs.has_changed_files }}"
+      - name: Echo state
+        env:
+          TARGET_BRANCH: ${{ needs.set-state.outputs.target_branch }}
+          REPO_ORG: ${{ github.event.repository.owner.login }}
+          REPO_NAME: ${{ github.event.repository.name }}
+          BRANCH_SHORT_REF: ${{ needs.set-state.outputs.branch_short_ref }}
+          BASE_SHA: ${{ needs.set-state.outputs.base_Sha }}
+          HAS_CHANGED_FILES: ${{ needs.set-state.outputs.has_changed_files }}
+        run: |
+          echo "Target branch - $TARGET_BRANCH"
+          echo "Repository org - $REPO_ORG"
+          echo "Repository name - $REPO_NAME"
+          echo "Repository branch - $BRANCH_SHORT_REF"
+          echo "Base Sha - $BASE_SHA"
+          echo "Has changed files - $HAS_CHANGED_FILES"
 
   ai-metadata-update:
     needs: [set-state]

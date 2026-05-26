@@ -128,14 +128,25 @@ jobs:
     needs: [set-state]
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Deploy to dev - ${{ needs.set-state.outputs.deploy_dev }}"
-      - run: echo "Deploy to prod - ${{ needs.set-state.outputs.deploy_prod }}"
-      - run: echo "Clean cache - ${{ needs.set-state.outputs.clean_cache }}"
-      - run: echo "Repository org - ${{ github.event.repository.owner.login }}"
-      - run: echo "Repository name - ${{ github.event.repository.name }}"
-      - run: echo "Repository branch - ${{ needs.set-state.outputs.branch_short_ref }}"
-      - run: echo "Path prefix - ${{ needs.set-state.outputs.path_prefix }}"
-      - run: echo "Exclude subfolder - ${{ needs.set-state.outputs.exclude_subfolder }}"
+      - name: Echo state
+        env:
+          DEPLOY_DEV: ${{ needs.set-state.outputs.deploy_dev }}
+          DEPLOY_PROD: ${{ needs.set-state.outputs.deploy_prod }}
+          CLEAN_CACHE: ${{ needs.set-state.outputs.clean_cache }}
+          REPO_ORG: ${{ github.event.repository.owner.login }}
+          REPO_NAME: ${{ github.event.repository.name }}
+          BRANCH_SHORT_REF: ${{ needs.set-state.outputs.branch_short_ref }}
+          PATH_PREFIX: ${{ needs.set-state.outputs.path_prefix }}
+          EXCLUDE_SUBFOLDER: ${{ needs.set-state.outputs.exclude_subfolder }}
+        run: |
+          echo "Deploy to dev - $DEPLOY_DEV"
+          echo "Deploy to prod - $DEPLOY_PROD"
+          echo "Clean cache - $CLEAN_CACHE"
+          echo "Repository org - $REPO_ORG"
+          echo "Repository name - $REPO_NAME"
+          echo "Repository branch - $BRANCH_SHORT_REF"
+          echo "Path prefix - $PATH_PREFIX"
+          echo "Exclude subfolder - $EXCLUDE_SUBFOLDER"
 
   pre-build-dev:
     needs: [set-state]

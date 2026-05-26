@@ -13,7 +13,8 @@ on:
         type: string
 
 jobs:
-  # Check if src/pages files were changed
+  # Detect whether src/pages files changed.
+  # All checker jobs depend on this output to decide whether to run.
   check-files:
     runs-on: ubuntu-latest
     outputs:
@@ -37,6 +38,14 @@ jobs:
             echo "⏭️ No changes in src/pages/, skipping validation"
           fi
 
+  # ── Checker jobs ────────────────────────────────────────────────────────────
+  # To add a new checker:
+  #   1. Add a job here with `needs: [check-files]` and
+  #      `if: needs.check-files.outputs.run_validation == 'true'`
+  #   2. Add it to the `needs` list of the `validate-pr` gate job below
+  #   3. Add a result check for it in the gate job's run step
+  # ────────────────────────────────────────────────────────────────────────────
+
   remark-lint:
     needs: [check-files]
     if: needs.check-files.outputs.run_validation == 'true'
@@ -44,100 +53,58 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-
-      - name: Lint DevSite Utils
-        run: |
-          echo "## Lint Results" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          # Run lint and capture output
-          set +e
-          npx --yes github:AdobeDocs/adp-devsite-utils runLint -v > lint-output.txt 2>&1
-          EXIT_CODE=$?
-          set -e
-          
-          # Check if there are warnings or errors in the output
-          if grep -q "Files with issues:" lint-output.txt || grep -q "⚠️  WARNING" lint-output.txt || [ $EXIT_CODE -ne 0 ]; then
-            echo "⚠️ **Linting issues detected**" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-          
-            # Extract and display summary
-            if grep -q "📊 Linting Summary:" lint-output.txt; then
-              echo "### Summary" >> $GITHUB_STEP_SUMMARY
-              echo '```' >> $GITHUB_STEP_SUMMARY
-              sed -n '/📊 Linting Summary:/,/^$/p' lint-output.txt | grep -E "(Files processed|Files with issues|Total issues|Warnings|fatal)" >> $GITHUB_STEP_SUMMARY
-              echo '```' >> $GITHUB_STEP_SUMMARY
-              echo "" >> $GITHUB_STEP_SUMMARY
-            fi
-          
-            # Display detailed issues
-            echo "### Detailed issues" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            # Extract file paths and their associated warnings/errors
-            grep -B 1 -E "⚠️|❌|WARNING|ERROR" lint-output.txt | grep -E "^src/pages/.*:|⚠️|❌|WARNING|ERROR" >> $GITHUB_STEP_SUMMARY || cat lint-output.txt >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-          
-            # Output to console as well
-            cat lint-output.txt
-            rm lint-output.txt
-          
-            echo "::warning::Warnings found but no fatal errors. See job summary for details."
-          
-            # Save warning status for the comment workflow
-            echo "true" > has-warnings.txt
-            echo "${{ inputs.pr_number }}" > pr-number.txt
-          else
-            echo "✅ **No issues found!**" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "All files passed linting checks." >> $GITHUB_STEP_SUMMARY
-            rm -f lint-output.txt
-          
-            # Save no-warning status
-            echo "false" > has-warnings.txt
-            echo "${{ inputs.pr_number }}" > pr-number.txt
-          fi
-
-      - name: Upload lint results
-        uses: actions/upload-artifact@v4
-        if: always()
         with:
-          name: lint-results
-          path: |
-            has-warnings.txt
-            pr-number.txt
+          fetch-depth: 0
 
-  # Gate job that always runs and becomes the required check
+      - name: Lint
+        id: lint
+        continue-on-error: true
+        run: npx --yes github:AdobeDocs/adp-devsite-utils runLint -v
+
+      - name: Save PR number
+        if: always()
+        run: echo "${{ inputs.pr_number }}" > pr-number.txt
+
+      - name: Upload linter report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linter-report
+          path: |
+            linter-report.txt
+            pr-number.txt
+          if-no-files-found: ignore
+
+      - name: Fail if linter found errors
+        if: steps.lint.outcome == 'failure'
+        run: exit 1
+
+  # ── Add new checker jobs above this line ────────────────────────────────────
+
+  # Gate job — always runs regardless of whether checkers were skipped or failed.
+  # This is the single job to set as a required check in branch protection,
+  # solving the "required check never ran" problem when no src/pages files changed.
   validate-pr:
     runs-on: ubuntu-latest
     needs: [check-files, remark-lint]
+    # When adding a new checker job, add it to the needs list above.
     if: always()
     steps:
       - name: Check validation results
         run: |
-          # If no src/pages files changed, pass automatically
+          # No src/pages files changed — pass automatically
           if [[ "${{ needs.check-files.outputs.run_validation }}" == "false" ]]; then
             echo "✅ No src/pages/ files changed - validation skipped"
-            echo "false" > has-warnings.txt
-            echo "${{ inputs.pr_number }}" > pr-number.txt
             exit 0
           fi
-          
-          # If src/pages files changed, check that all validation jobs succeeded
+
+          # src/pages files changed — all checker jobs must have succeeded.
+          # When adding a new checker job, add its result check here.
           if [[ "${{ needs.remark-lint.result }}" == "success" ]]; then
             echo "✅ All validation checks passed"
             exit 0
           else
             echo "❌ One or more validation checks failed"
-            echo "Remark Lint: ${{ needs.remark-lint.result }}"
+            echo "  remark-lint: ${{ needs.remark-lint.result }}"
             exit 1
           fi
-
-      - name: Upload lint results for skipped validation
-        if: needs.check-files.outputs.run_validation == 'false'
-        uses: actions/upload-artifact@v4
-        with:
-          name: lint-results
-          path: |
-            has-warnings.txt
-            pr-number.txt

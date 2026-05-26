@@ -73,12 +73,12 @@ jobs:
       - name: Collect changed markdown files
         id: files
         shell: bash
+        env:
+          BASE: ${{ github.event.before }}
+          HEAD: ${{ github.sha }}
+          TARGET_PATH: ${{ inputs.FOLDER_PATH }}
         run: |
           shopt -s globstar
-
-          BASE="${{ github.event.before }}"
-          HEAD="${{ github.sha }}"
-          TARGET_PATH="${{ inputs.FOLDER_PATH }}"
 
           if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
             BASE="${HEAD}^"

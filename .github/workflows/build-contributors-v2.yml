@@ -31,16 +31,20 @@ jobs:
           private-key: ${{ secrets.ADP_DEVSITE_APP_PRIVATE_KEY }}
 
       - name: Build Contributors
-        run: npx --yes github:AdobeDocs/adp-devsite-utils buildContributorsV2 -v ${{ inputs.buildAll && '--all' || '' }}
+        run: npx --yes github:AdobeDocs/adp-devsite-utils buildContributorsV2 -v $BUILD_ALL_FLAG
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
           BASE_SHA: ${{ inputs.baseSha || github.event.before }}
+          BUILD_ALL_FLAG: ${{ inputs.buildAll && '--all' || '' }}
 
       - name: Commit and push if changed
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          REPO: ${{ github.repository }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git remote set-url origin https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/${{ github.repository }}
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${REPO}"
           git add src/pages/contributors.json
           git pull
           git diff --cached --quiet || git commit -m "chore: auto-generate contributors"

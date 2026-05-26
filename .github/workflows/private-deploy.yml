@@ -38,15 +38,18 @@ jobs:
 
       - name: Set Matrix
         id: set-matrix
+        env:
+          REPO_OWNER: ${{ github.repository_owner }}
+          ENV_NAME: ${{ inputs.env }}
         run: |
           echo "================================================"
           echo "MATRIX PREPARATION"
           echo "================================================"
-          echo "Organization: ${{ github.repository_owner }}"
-          echo "Environment: ${{ inputs.env }}"
+          echo "Organization: $REPO_OWNER"
+          echo "Environment: $ENV_NAME"
 
           # Load the JSON data
-          matrix=$(jq --arg org "${{ github.repository_owner }}" --arg env "${{ inputs.env }}" '[.[] | select(.org == $org and .env == $env)]' _workflow-config/.github/matrix/runner_matrix.json)
+          matrix=$(jq --arg org "$REPO_OWNER" --arg env "$ENV_NAME" '[.[] | select(.org == $org and .env == $env)]' _workflow-config/.github/matrix/runner_matrix.json)
 
           # Set the formatted matrix as an output
           echo "matrix={\"include\":$(echo $matrix)}" >> $GITHUB_OUTPUT
@@ -93,13 +96,23 @@ jobs:
     strategy:
       matrix: ${{fromJson(needs.matrix_prep.outputs.matrix)}}
     steps:
-      - run: echo "Deploy to stg - ${{ needs.set-state.outputs.deploy_stg }}"
-      - run: echo "Deploy to prod - ${{ needs.set-state.outputs.deploy_prod }}"
-      - run: echo "Clean cache - ${{ needs.set-state.outputs.clean_cache }}"
-      - run: echo "Repository org - ${{ github.event.repository.owner.login }}"
-      - run: echo "Repository name - ${{ github.event.repository.name }}"
-      - run: echo "Repository branch - ${{ needs.set-state.outputs.branch_short_ref }}"
-      - run: echo "Path prefix - ${{ needs.set-state.outputs.path_prefix }}"
+      - name: Echo state
+        env:
+          DEPLOY_STG: ${{ needs.set-state.outputs.deploy_stg }}
+          DEPLOY_PROD: ${{ needs.set-state.outputs.deploy_prod }}
+          CLEAN_CACHE: ${{ needs.set-state.outputs.clean_cache }}
+          REPO_ORG: ${{ github.event.repository.owner.login }}
+          REPO_NAME: ${{ github.event.repository.name }}
+          BRANCH_SHORT_REF: ${{ needs.set-state.outputs.branch_short_ref }}
+          PATH_PREFIX: ${{ needs.set-state.outputs.path_prefix }}
+        run: |
+          echo "Deploy to stg - $DEPLOY_STG"
+          echo "Deploy to prod - $DEPLOY_PROD"
+          echo "Clean cache - $CLEAN_CACHE"
+          echo "Repository org - $REPO_ORG"
+          echo "Repository name - $REPO_NAME"
+          echo "Repository branch - $BRANCH_SHORT_REF"
+          echo "Path prefix - $PATH_PREFIX"
 
   pre-build:
     needs: [set-state, matrix_prep]
@@ -170,10 +183,12 @@ jobs:
 
       - name: Read site config
         id: config
+        env:
+          SITE_PATH_INPUT: ${{ needs.set-state.outputs.path_prefix }}
         run: |
           # Use pathPrefix from set-state job
-          SITE_PATH="${{ needs.set-state.outputs.path_prefix }}"
-          
+          SITE_PATH="$SITE_PATH_INPUT"
+
           # Strip leading and trailing slashes if present
           SITE_PATH=$(echo "$SITE_PATH" | sed 's|^/||' | sed 's|/$||')
 
@@ -500,11 +515,14 @@ jobs:
           echo "✓ Deployment to Azure completed successfully"
 
       - name: Purge Fastly Cache
+        env:
+          FASTLY_URL: ${{ needs.set-state.outputs.deploy_prod == 'true' && secrets.AIO_FASTLY_PROD_URL || secrets.AIO_FASTLY_DEV_URL }}
+          PATH_PREFIX: ${{ needs.set-state.outputs.path_prefix }}
         run: |
           echo "================================================"
           echo "PURGING FASTLY CACHE"
           echo "================================================"
-          echo "URL: ${{ needs.set-state.outputs.deploy_prod == 'true' && secrets.AIO_FASTLY_PROD_URL || secrets.AIO_FASTLY_DEV_URL }}${{ needs.set-state.outputs.path_prefix }}"
+          echo "URL: ${FASTLY_URL}${PATH_PREFIX}"
           
       - name: Purge cache
         uses: AdobeDocs/gatsby-fastly-purge-action@master

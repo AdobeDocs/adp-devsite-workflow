@@ -27,9 +27,11 @@ jobs:
 
       - name: Check for src/pages changes
         id: filter
+        env:
+          BASE_REF: ${{ inputs.base_ref }}
         run: |
-          git fetch origin ${{ inputs.base_ref }}
-          CHANGED_FILES=$(git diff --name-only origin/${{ inputs.base_ref }}...HEAD)
+          git fetch origin "$BASE_REF"
+          CHANGED_FILES=$(git diff --name-only "origin/${BASE_REF}...HEAD")
           if echo "$CHANGED_FILES" | grep -q "^src/pages/"; then
             echo "run_validation=true" >> $GITHUB_OUTPUT
             echo "✅ Changes detected in src/pages/"
@@ -63,7 +65,9 @@ jobs:
 
       - name: Save PR number
         if: always()
-        run: echo "${{ inputs.pr_number }}" > pr-number.txt
+        env:
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: echo "$PR_NUMBER" > pr-number.txt
 
       - name: Upload linter report
         if: always()
@@ -91,20 +95,23 @@ jobs:
     if: always()
     steps:
       - name: Check validation results
+        env:
+          RUN_VALIDATION: ${{ needs.check-files.outputs.run_validation }}
+          REMARK_LINT_RESULT: ${{ needs.remark-lint.result }}
         run: |
           # No src/pages files changed — pass automatically
-          if [[ "${{ needs.check-files.outputs.run_validation }}" == "false" ]]; then
+          if [[ "$RUN_VALIDATION" == "false" ]]; then
             echo "✅ No src/pages/ files changed - validation skipped"
             exit 0
           fi
 
           # src/pages files changed — all checker jobs must have succeeded.
           # When adding a new checker job, add its result check here.
-          if [[ "${{ needs.remark-lint.result }}" == "success" ]]; then
+          if [[ "$REMARK_LINT_RESULT" == "success" ]]; then
             echo "✅ All validation checks passed"
             exit 0
           else
             echo "❌ One or more validation checks failed"
-            echo "  remark-lint: ${{ needs.remark-lint.result }}"
+            echo "  remark-lint: $REMARK_LINT_RESULT"
             exit 1
           fi

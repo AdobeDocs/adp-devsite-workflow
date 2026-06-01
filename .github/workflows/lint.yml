@@ -1,0 +1,38 @@
+---
+name: Lint
+on:
+  workflow_call:
+    inputs:
+      pr_number
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Lint
+        id: lint
+        continue-on-error: true
+        run: npx --yes github:AdobeDocs/adp-devsite-utils runLint -v
+
+      - name: Save PR number
+        if: always() && inputs.pr_number != 0
+        run: echo "${{ inputs.pr_number }}" > pr-number.txt
+
+      - name: Upload linter report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linter-report
+          path: |
+            linter-report.txt
+            pr-number.txt
+          if-no-files-found: ignore
+
+      - name: Fail if linter found errors
+        if: steps.lint.outcome == 'failure'
+        run: exit 1

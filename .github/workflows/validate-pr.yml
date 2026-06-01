@@ -48,15 +48,12 @@ jobs:
   #   3. Add a result check for it in the gate job's run step
   # ────────────────────────────────────────────────────────────────────────────
 
-  remark-lint:
+  lint:
     needs: [check-files]
     if: needs.check-files.outputs.run_validation == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
+    uses: ./.github/workflows/lint.yml
+    with:
+      pr_number: ${{ inputs.pr_number }}
 
       - name: Lint
         id: lint

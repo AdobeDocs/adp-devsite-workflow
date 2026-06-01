@@ -1,0 +1,35 @@
+---
+name: Post Lint Comment
+on:
+  workflow_call:
+    inputs:
+      run_id:
+        description: >
+          Workflow run ID that produced the linter-report artifact.
+          Pass github.event.workflow_run.id from the caller.
+        required: true
+        type: number
+
+permissions:
+  pull-requests: write
+
+jobs:
+  comment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download linter report artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: linter-report
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Post Linter Report to PR
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          LINTER_REPORT_PATH: ./linter-report.txt
+          PR_NUMBER_PATH: ./pr-number.txt
+        run: |
+          npm install --no-save github:AdobeDocs/adp-devsite-scripts
+          node node_modules/adp-devsite-scripts/linter-bot/postLinterReport.js

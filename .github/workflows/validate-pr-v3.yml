@@ -48,40 +48,12 @@ jobs:
   #   3. Add a result check for it in the gate job's run step
   # ────────────────────────────────────────────────────────────────────────────
 
-  remark-lint:
+  lint:
     needs: [check-files]
     if: needs.check-files.outputs.run_validation == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Lint
-        id: lint
-        continue-on-error: true
-        run: npx --yes github:AdobeDocs/adp-devsite-utils runLint -v
-
-      - name: Save PR number
-        if: always()
-        env:
-          PR_NUMBER: ${{ inputs.pr_number }}
-        run: echo "$PR_NUMBER" > pr-number.txt
-
-      - name: Upload linter report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: linter-report
-          path: |
-            linter-report.txt
-            pr-number.txt
-          if-no-files-found: ignore
-
-      - name: Fail if linter found errors
-        if: steps.lint.outcome == 'failure'
-        run: exit 1
+    uses: ./.github/workflows/lint-v3.yml
+    with:
+      pr_number: ${{ inputs.pr_number }}
 
   # ── Add new checker jobs above this line ────────────────────────────────────
 
@@ -90,14 +62,14 @@ jobs:
   # solving the "required check never ran" problem when no src/pages files changed.
   validate-pr:
     runs-on: ubuntu-latest
-    needs: [check-files, remark-lint]
+    needs: [check-files, lint]
     # When adding a new checker job, add it to the needs list above.
     if: always()
     steps:
       - name: Check validation results
         env:
           RUN_VALIDATION: ${{ needs.check-files.outputs.run_validation }}
-          REMARK_LINT_RESULT: ${{ needs.remark-lint.result }}
+          LINT_RESULT: ${{ needs.lint.result }}
         run: |
           # No src/pages files changed — pass automatically
           if [[ "$RUN_VALIDATION" == "false" ]]; then
@@ -107,11 +79,11 @@ jobs:
 
           # src/pages files changed — all checker jobs must have succeeded.
           # When adding a new checker job, add its result check here.
-          if [[ "$REMARK_LINT_RESULT" == "success" ]]; then
+          if [[ "$LINT_RESULT" == "success" ]]; then
             echo "✅ All validation checks passed"
             exit 0
           else
             echo "❌ One or more validation checks failed"
-            echo "  remark-lint: $REMARK_LINT_RESULT"
+            echo "  lint: $LINT_RESULT"
             exit 1
           fi

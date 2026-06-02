@@ -1,0 +1,30 @@
+---
+name: PR Comment
+on:
+  workflow_call:
+    inputs:
+      run_id:
+        description: >
+          Workflow run ID that produced the linter-report artifact.
+          Pass github.event.workflow_run.id from the caller.
+        required: true
+        type: number
+      event:
+        description: >
+          Event that triggered the watched workflow run.
+          Pass github.event.workflow_run.event from the caller.
+          The comment is only posted when this is 'pull_request'.
+        required: true
+        type: string
+
+permissions:
+  pull-requests: write
+
+jobs:
+  # Only post a comment for pull_request events — push and other
+  # events do not have a PR to comment on.
+  post-lint-comment:
+    if: inputs.event == 'pull_request'
+    uses: ./.github/workflows/post-lint-comment-v3.yml
+    with:
+      run_id: ${{ inputs.run_id }}

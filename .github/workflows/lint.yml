@@ -3,7 +3,14 @@ name: Lint
 on:
   workflow_call:
     inputs:
-      pr_number
+      pr_number:
+        description: >
+          Pull request number. Used to associate the linter report artifact
+          with the PR so the post-lint-comment workflow can post results.
+          Pass 0 (or omit) if you do not use the linter report comment.
+        required: false
+        type: number
+        default: 0
 
 jobs:
   lint:

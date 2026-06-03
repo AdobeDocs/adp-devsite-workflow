@@ -18,13 +18,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download linter report artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: linter-report
           run-id: ${{ inputs.run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
+      # When src/pages/ had no changes, validate-pr-v3.yml uploads a
+      # lint-skipped.txt sentinel instead of a real report. Detect it here
+      # so we skip posting rather than failing on a missing report file.
+      - name: Check if lint was skipped
+        id: skipped
+        run: |
+          if [ -f lint-skipped.txt ]; then
+            echo "Lint was skipped (no src/pages/ changes) — nothing to post."
+            echo "value=true" >> $GITHUB_OUTPUT
+          else
+            echo "value=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Post Linter Report to PR
+        if: steps.skipped.outputs.value != 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}

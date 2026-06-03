@@ -42,23 +42,20 @@ jobs:
           else
             echo "run_lint=false" >> $GITHUB_OUTPUT
             echo "⏭️ No changes in src/pages/, skipping lint"
+            # Create sentinel here so the upload step below can reference it.
+            echo "skipped" > lint-skipped.txt
           fi
 
-      # ── Skipped path ─────────────────────────────────────────────────────────
-      # Upload a sentinel so post-lint-comment-v3.yml always finds the artifact
-      # and knows not to post a comment.
-      - name: Create lint-skipped sentinel
-        if: steps.filter.outputs.run_lint == 'false'
-        run: echo "skipped" > lint-skipped.txt
-
-      - name: Upload lint-skipped sentinel artifact
+      # No src/pages changes — upload sentinel so post-lint-comment-v3.yml
+      # knows not to post a comment, then return success.
+      - name: Upload lint-skipped sentinel
         if: steps.filter.outputs.run_lint == 'false'
         uses: actions/upload-artifact@v4
         with:
           name: linter-report
           path: lint-skipped.txt
 
-      # ── Active path ───────────────────────────────────────────────────────────
+      # src/pages changed — run the linter and upload the report.
       - name: Lint
         if: steps.filter.outputs.run_lint == 'true'
         id: lint

@@ -11,27 +11,53 @@ on:
         required: false
         type: number
         default: 0
+      skip:
+        description: >
+          When true, skips linting and uploads a lint-skipped.txt sentinel
+          artifact so that post-lint-comment-v3.yml can detect the skip and
+          exit cleanly without posting a comment.
+          Set to true when no src/pages/ files changed.
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
+      # ── Skipped path ─────────────────────────────────────────────────────────
+      # Upload a sentinel so post-lint-comment-v3.yml always finds the artifact
+      # and knows not to post a comment.
+      - name: Create lint-skipped sentinel
+        if: inputs.skip
+        run: echo "skipped" > lint-skipped.txt
+
+      - name: Upload lint-skipped sentinel artifact
+        if: inputs.skip
+        uses: actions/upload-artifact@v4
+        with:
+          name: linter-report
+          path: lint-skipped.txt
+
+      # ── Active path ───────────────────────────────────────────────────────────
       - name: Checkout
+        if: inputs.skip == false
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Lint
+        if: inputs.skip == false
         id: lint
         continue-on-error: true
         run: npx --yes github:AdobeDocs/adp-devsite-utils runLint -v
 
       - name: Save PR number
-        if: always() && inputs.pr_number != 0
+        if: always() && inputs.skip == false && inputs.pr_number != 0
         run: echo "${{ inputs.pr_number }}" > pr-number.txt
 
       - name: Upload linter report
-        if: always()
+        if: always() && inputs.skip == false
         uses: actions/upload-artifact@v4
         with:
           name: linter-report
@@ -41,5 +67,5 @@ jobs:
           if-no-files-found: ignore
 
       - name: Fail if linter found errors
-        if: steps.lint.outcome == 'failure'
+        if: inputs.skip == false && steps.lint.outcome == 'failure'
         run: exit 1

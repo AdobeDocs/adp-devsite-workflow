@@ -14,7 +14,19 @@ on:
         default: false
 
 jobs:
+  validate-prod-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reject prod deployment from non-main branch
+        if: contains(inputs.env, 'prod') && github.ref != 'refs/heads/main'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const branch = context.ref.replace('refs/heads/', '');
+            core.setFailed(`Production deployment is only allowed from the 'main' branch. Current branch: '${branch}'. Please merge to 'main' and re-run, or select 'stage' as the environment.`);
+
   get-base-sha:
+    needs: [validate-prod-branch]
     runs-on: ubuntu-latest
     outputs:
       base_sha: ${{ steps.last-successful-deploy.outputs.base_sha }}

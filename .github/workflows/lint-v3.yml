@@ -55,12 +55,16 @@ jobs:
           name: linter-report
           path: lint-skipped.txt
 
-      # src/pages changed — run the linter and upload the report.
+      # src/pages changed — run the linter on changed .md files only and upload the report.
       - name: Lint
         if: steps.filter.outputs.run_lint == 'true'
         id: lint
         continue-on-error: true
-        run: npx --yes github:AdobeDocs/adp-devsite-utils runLint -v
+        env:
+          BASE_REF: ${{ inputs.base_ref }}
+        run: |
+          CHANGED_MD=$(git diff --name-only "origin/${BASE_REF}...HEAD" | grep "^src/pages/.*\.md$" | tr '\n' ' ')
+          npx --yes github:AdobeDocs/adp-devsite-utils#DEVSITE-2442 runLint -v $CHANGED_MD
 
       - name: Save PR number
         if: always() && steps.filter.outputs.run_lint == 'true' && inputs.pr_number != 0

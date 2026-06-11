@@ -15,6 +15,7 @@ on:
 
 jobs:
   get-base-sha:
+    if: github.repository_owner == 'AdobeDocs'
     runs-on: ubuntu-latest
     outputs:
       base_sha: ${{ steps.last-successful-deploy.outputs.base_sha }}
@@ -139,7 +140,7 @@ jobs:
       run:
         shell: bash
     needs: [set-state, build-auto-generated-files]
-    if: always()
+    if: always() && github.repository_owner == 'AdobeDocs'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

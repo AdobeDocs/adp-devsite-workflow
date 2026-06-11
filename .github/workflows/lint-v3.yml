@@ -1,0 +1,85 @@
+---
+name: Lint
+on:
+  workflow_call:
+    inputs:
+      pr_number:
+        description: >
+          Pull request number. Used to associate the linter report artifact
+          with the PR so the post-lint-comment workflow can post results.
+          Pass 0 (or omit) if you do not use the linter report comment.
+        required: false
+        type: number
+        default: 0
+      base_ref:
+        description: >
+          Base branch reference. Used to detect whether src/pages/ files
+          changed. When no changes are found, lint is skipped and a
+          lint-skipped.txt sentinel is uploaded so post-lint-comment-v3.yml
+          exits cleanly without posting a comment.
+        required: true
+        type: string
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Check for src/pages changes
+        id: filter
+        env:
+          BASE_REF: ${{ inputs.base_ref }}
+        run: |
+          git fetch origin "$BASE_REF"
+          CHANGED_FILES=$(git diff --name-only "origin/${BASE_REF}...HEAD")
+          if echo "$CHANGED_FILES" | grep -q "^src/pages/"; then
+            echo "run_lint=true" >> $GITHUB_OUTPUT
+            echo "✅ Changes detected in src/pages/"
+          else
+            echo "run_lint=false" >> $GITHUB_OUTPUT
+            echo "⏭️ No changes in src/pages/, skipping lint"
+            # Create sentinel here so the upload step below can reference it.
+            echo "skipped" > lint-skipped.txt
+          fi
+
+      # No src/pages changes — upload sentinel so post-lint-comment-v3.yml
+      # knows not to post a comment, then return success.
+      - name: Upload lint-skipped sentinel
+        if: steps.filter.outputs.run_lint == 'false'
+        uses: actions/upload-artifact@v4
+        with:
+          name: linter-report
+          path: lint-skipped.txt
+
+      # src/pages changed — run the linter on changed .md files only and upload the report.
+      - name: Lint
+        if: steps.filter.outputs.run_lint == 'true'
+        id: lint
+        continue-on-error: true
+        env:
+          BASE_REF: ${{ inputs.base_ref }}
+        run: |
+          CHANGED_MD=$(git diff --name-only "origin/${BASE_REF}...HEAD" | grep "^src/pages/.*\.md$" | tr '\n' ' ')
+          npx --yes github:AdobeDocs/adp-devsite-utils#DEVSITE-2442 runLint -v $CHANGED_MD
+
+      - name: Save PR number
+        if: always() && steps.filter.outputs.run_lint == 'true' && inputs.pr_number != 0
+        run: echo "${{ inputs.pr_number }}" > pr-number.txt
+
+      - name: Upload linter report
+        if: always() && steps.filter.outputs.run_lint == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: linter-report
+          path: |
+            linter-report.txt
+            pr-number.txt
+          if-no-files-found: ignore
+
+      - name: Fail if linter found errors
+        if: steps.filter.outputs.run_lint == 'true' && steps.lint.outcome == 'failure'
+        run: exit 1

@@ -1,0 +1,121 @@
+@startuml ADP EDS PR Workflow Architecture v3
+
+skinparam componentStyle rectangle
+skinparam backgroundColor #FEFEFE
+skinparam defaultFontName Arial
+skinparam ArrowColor #555555
+skinparam ArrowThickness 1.5
+skinparam NoteBackgroundColor #FFFDE7
+skinparam NoteBorderColor #F9A825
+
+skinparam package {
+  BackgroundColor #F8F8F8
+  BorderColor #AAAAAA
+  FontStyle bold
+}
+skinparam component {
+  BackgroundColor #E3F2FD
+  BorderColor #1E88E5
+  FontColor #111111
+}
+
+title ADP EDS — PR Validation & Comment Architecture (v3)
+
+' ══════════════════════════════════════════════════════════════
+' ADP PLATFORM WORKFLOW REPO
+' ══════════════════════════════════════════════════════════════
+package "adp-devsite-workflow  (ADP Platform)" as adpWFRepo {
+
+  ' ── Validation chain ──────────────────────────────────────
+  component "validate-pr-v3.yml\n──────────────────────\n  input: pr_number\n  input: base_ref\n  ─\n  job: lint  →  calls lint-v3.yml\n  job: validate-pr  (gate, if: always())" as adpValidate #D1C4E9
+
+  component "lint-v3.yml\n──────────────────────\n  input: base_ref  (required)\n  input: pr_number  (optional)\n  ─\n  step: checkout\n  step: diff origin/{base_ref}...HEAD\n  ──\n  [no src/pages/ changes]\n  step: upload lint-skipped.txt sentinel\n  ──\n  [src/pages/ changes detected]\n  step: npx runLint\n  step: upload linter-report artifact\n  step: fail on errors" as lintWF #C8E6C9
+
+  ' ── Comment chain ─────────────────────────────────────────
+  component "pr-comment-v3.yml\n──────────────────────\n  input: run_id\n  input: event\n  ─\n  job: post-lint-comment\n        if: event == 'pull_request'" as prCommentWF #D1C4E9
+
+  component "post-lint-comment-v3.yml\n──────────────────────\n  input: run_id\n  ─\n  step: download linter-report artifact\n  step: check for lint-skipped.txt\n  step: postLinterReport.js\n        (skipped if sentinel found)" as postLintWF #C8E6C9
+
+}
+
+' ══════════════════════════════════════════════════════════════
+' SHARED LINTER
+' ══════════════════════════════════════════════════════════════
+package "adp-devsite-utils" as utils {
+  [npx runLint] as linter #B3E5FC
+}
+
+' ══════════════════════════════════════════════════════════════
+' DEFAULT CONTENT REPOS
+' ══════════════════════════════════════════════════════════════
+package "Content Repos\n(dev-docs-template, adp-devsite-github-actions-test, ...)" as defaultRepos {
+
+  component "pr-validation.yml\n──────────────────────\n  trigger: pull_request\n  ─\n  uses: adp-devsite-workflow/\n        validate-pr-v3.yml@main\n  with: pr_number, base_ref" as defaultPR #BBDEFB
+
+  component "pr-comment.yml\n──────────────────────\n  trigger: workflow_run\n           [\"PR validation\"] completed\n  ─\n  uses: adp-devsite-workflow/\n        pr-comment-v3.yml@main\n  with: run_id, event" as defaultComment #BBDEFB
+
+}
+
+' ══════════════════════════════════════════════════════════════
+' COMMERCE REPOS  (lint-v3.yml integrated)
+' ══════════════════════════════════════════════════════════════
+package "commerce-php  (content repo)" as commercePhp {
+  component "pr-validation.yml\n──────────────────────\n  trigger: pull_request\n  ─\n  uses: commerce-contributor/\n        validate-pr.yml@workflow-update\n  with: pr_number, base_ref" as commercePR #BBDEFB
+
+  component "pr-comment.yml\n──────────────────────\n  trigger: workflow_run\n           [\"PR validation\"] completed\n  ─\n  uses: adp-devsite-workflow/\n        pr-comment-v3.yml@main\n  with: run_id, event" as commerceComment #BBDEFB
+}
+
+package "commerce-contributor  (custom workflow repo)" as commerceContrib {
+  component "validate-pr.yml\n──────────────────────\n  job: check-files\n  job: toc\n  job: markdown-lint\n  job: lint\n        uses: adp-devsite-workflow/\n              lint-v3.yml@main\n  job: validate-pr  (gate)" as dimaValidate #FFF9C4
+}
+
+' ══════════════════════════════════════════════════════════════
+' ARTIFACT — bridges the two chains
+' ══════════════════════════════════════════════════════════════
+database "linter-report artifact\n──────────────────────\n  [skip path]  lint-skipped.txt\n  [lint path]  linter-report.txt\n               pr-number.txt" as artifact #FFF3E0
+
+' ══════════════════════════════════════════════════════════════
+' CONNECTIONS — Default content repo validation chain
+' ══════════════════════════════════════════════════════════════
+defaultPR      -down->  adpValidate  : workflow_call
+adpValidate    -down->  lintWF       : workflow_call\n(base_ref, pr_number)
+lintWF         -down->  linter       : npx runLint -v\n(only if src/pages/ changed)
+lintWF         -right-> artifact     : upload\n(sentinel or report)
+
+' ══════════════════════════════════════════════════════════════
+' CONNECTIONS — Commerce validation chain
+' ══════════════════════════════════════════════════════════════
+commercePR     -down->  dimaValidate : workflow_call
+dimaValidate   -right-> lintWF       : workflow_call\n(base_ref, pr_number)
+
+' ══════════════════════════════════════════════════════════════
+' CONNECTIONS — Comment chain (both repos)
+' ══════════════════════════════════════════════════════════════
+defaultComment -down->  prCommentWF  : workflow_call\n(run_id, event)
+commerceComment -down-> prCommentWF  : workflow_call\n(run_id, event)
+prCommentWF    -down->  postLintWF   : workflow_call\n(run_id)\nif: event == pull_request
+artifact       -down->  postLintWF   : download by run_id
+
+' ══════════════════════════════════════════════════════════════
+' NOTES
+' ══════════════════════════════════════════════════════════════
+note right of defaultComment
+  workflow_run: completed
+  runs on base branch (main)
+  with full write permissions —
+  safe for fork PRs
+end note
+
+note right of lintWF
+  Always runs & always exits 0
+  (sentinel path) or 0/1 (lint path).
+  Gate job only needs to check
+  lint result — no early-exit logic.
+end note
+
+note bottom of postLintWF
+  lint-skipped.txt present → skip post
+  linter-report.txt present → post comment
+end note
+
+@enduml

@@ -1,0 +1,54 @@
+---
+name: Validate pull request
+on:
+  workflow_call:
+    inputs:
+      pr_number:
+        description: 'Pull request number'
+        required: true
+        type: number
+      base_ref:
+        description: 'Base branch reference'
+        required: true
+        type: string
+
+jobs:
+  # ── Checker jobs ────────────────────────────────────────────────────────────
+  # To add a new checker:
+  #   1. Add a job here (no needs required for independent checkers)
+  #   2. Add it to the `needs` list of the `validate-pr` gate job below
+  #   3. Add a result check for it in the gate job's run step
+  # ────────────────────────────────────────────────────────────────────────────
+
+  lint:
+    uses: ./.github/workflows/lint-v3.yml
+    with:
+      base_ref: ${{ inputs.base_ref }}
+      pr_number: ${{ inputs.pr_number }}
+
+  # ── Add new checker jobs above this line ────────────────────────────────────
+
+  # Gate job — always runs regardless of whether checkers succeeded or failed.
+  # This is the single job to set as a required check in branch protection.
+  # lint-v3.yml handles the src/pages detection internally and always exits 0
+  # (either ran cleanly or uploaded a skip sentinel), so no early-exit needed.
+  validate-pr:
+    runs-on: ubuntu-latest
+    needs: [lint]
+    # When adding a new checker job, add it to the needs list above.
+    if: always()
+    steps:
+      - name: Check validation results
+        env:
+          LINT_RESULT: ${{ needs.lint.result }}
+        run: |
+          # All checker jobs must have succeeded.
+          # When adding a new checker job, add its result check here.
+          if [[ "$LINT_RESULT" == "success" ]]; then
+            echo "✅ All validation checks passed"
+            exit 0
+          else
+            echo "❌ One or more validation checks failed"
+            echo "  lint: $LINT_RESULT"
+            exit 1
+          fi

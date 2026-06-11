@@ -155,7 +155,7 @@ jobs:
     if: |
       always() &&
       github.repository_owner == 'AdobeDocs' &&
-      needs.set-state.result == 'success' &&
+      needs.set-state.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

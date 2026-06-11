@@ -14,7 +14,19 @@ on:
         default: false
 
 jobs:
+  validate-prod-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reject prod deployment from non-main branch
+        if: contains(inputs.env, 'prod') && github.ref != 'refs/heads/main'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const branch = context.ref.replace('refs/heads/', '');
+            core.setFailed(`Production deployment is only allowed from the 'main' branch. Current branch: '${branch}'. Please merge to 'main' and re-run, or use the Staging workflow to deploy a non-main branch.`);
+
   get-base-sha:
+    needs: [validate-prod-branch]
     if: github.repository_owner == 'AdobeDocs'
     runs-on: ubuntu-latest
     outputs:
@@ -140,7 +152,10 @@ jobs:
       run:
         shell: bash
     needs: [set-state, build-auto-generated-files]
-    if: always() && github.repository_owner == 'AdobeDocs'
+    if: |
+      always() &&
+      github.repository_owner == 'AdobeDocs' &&
+      needs.set-state.result == 'success' &&
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

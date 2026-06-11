@@ -151,9 +151,6 @@ jobs:
       run:
         shell: bash
     needs: [set-state, build-auto-generated-files]
-    # Run when set-state succeeded (which transitively requires validate-prod-branch to pass)
-    # and build-auto-generated-files either succeeded or was skipped (no-app-secrets repos).
-    # Using always() here would let deploy proceed even when an upstream gate fails.
     if: |
       always() &&
       needs.set-state.result == 'success' &&

@@ -36,7 +36,7 @@ jobs:
           private-key: ${{ secrets.ADP_DEVSITE_APP_PRIVATE_KEY }}
 
       - name: Build Contributors
-        run: npx --yes github:AdobeDocs/adp-devsite-utils buildContributorsV2 -v $BUILD_ALL_FLAG
+        run: npx --yes github:AdobeDocs/adp-devsite-utils#node-24 buildContributorsV2 -v $BUILD_ALL_FLAG
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
           BASE_SHA: ${{ inputs.baseSha || github.event.before }}

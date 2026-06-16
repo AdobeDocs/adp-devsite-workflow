@@ -27,7 +27,7 @@ jobs:
           private-key: ${{ secrets.ADP_DEVSITE_APP_PRIVATE_KEY }}
 
       - name: Build Site Metadata
-        run: npx --yes github:AdobeDocs/adp-devsite-utils buildSiteMetadata -v
+        run: npx --yes github:AdobeDocs/adp-devsite-utils#node-24 buildSiteMetadata -v
 
       - name: Commit and push if changed
         env:

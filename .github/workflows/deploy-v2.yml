@@ -168,6 +168,11 @@ jobs:
           path: scripts
           ref: main
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "lts/krypton"
+
       - name: Pull auto-generated file commits
         run: git pull
 
@@ -193,12 +198,6 @@ jobs:
       - name: Unshallow repository
         if: needs.set-state.outputs.deploy_all == 'false' && needs.set-state.outputs.base_sha != '' && steps.check-sha-diff.outputs.base_equals_head != 'true'
         run: git fetch --unshallow 2>/dev/null || true
-
-      - name: Setup Node.js
-        if: needs.set-state.outputs.deploy_all == 'false' && steps.check-sha-diff.outputs.base_equals_head != 'true'
-        uses: actions/setup-node@v6
-        with:
-          node-version: "lts/krypton"
 
       - name: Get changed files in the src/pages folder
         if: needs.set-state.outputs.deploy_all == 'false' && steps.check-sha-diff.outputs.base_equals_head != 'true'

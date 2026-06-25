@@ -35,7 +35,7 @@ jobs:
           BASE_REF: ${{ inputs.base_ref }}
         run: |
           git fetch origin "$BASE_REF"
-          CHANGED_FILES=$(git diff --name-only "origin/${BASE_REF}...HEAD")
+          CHANGED_FILES=$(git diff --diff-filter=d --name-only "origin/${BASE_REF}...HEAD")
           if echo "$CHANGED_FILES" | grep -q "^src/pages/"; then
             echo "run_lint=true" >> $GITHUB_OUTPUT
             echo "✅ Changes detected in src/pages/"
@@ -63,7 +63,7 @@ jobs:
         env:
           BASE_REF: ${{ inputs.base_ref }}
         run: |
-          CHANGED_MD=$(git diff --name-only "origin/${BASE_REF}...HEAD" | grep "^src/pages/.*\.md$" | tr '\n' ' ')
+          CHANGED_MD=$(git diff --diff-filter=d --name-only "origin/${BASE_REF}...HEAD" | grep "^src/pages/.*\.md$" | tr '\n' ' ')
           npx --yes github:AdobeDocs/adp-devsite-utils#DEVSITE-2442 runLint -v $CHANGED_MD
 
       - name: Save PR number

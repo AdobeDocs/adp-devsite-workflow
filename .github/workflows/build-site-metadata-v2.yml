@@ -7,7 +7,7 @@ jobs:
   build-site-metadata:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v6

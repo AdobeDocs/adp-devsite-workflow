@@ -174,7 +174,9 @@ jobs:
           node-version: "lts/krypton"
 
       - name: Pull auto-generated file commits
-        run: git pull
+        env:
+          BRANCH: ${{ needs.set-state.outputs.branch_short_ref }}
+        run: git pull origin "$BRANCH" --ff-only
 
       - name: Get head SHA
         id: get-head-sha

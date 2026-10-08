@@ -27,7 +27,12 @@ jobs:
           private-key: ${{ secrets.ADP_DEVSITE_APP_PRIVATE_KEY }}
 
       - name: Build Site Metadata
-        run: npx --yes github:AdobeDocs/adp-devsite-utils buildSiteMetadata -v
+        run: |
+          git clone --depth 1 https://github.com/AdobeDocs/adp-devsite-utils.git "$RUNNER_TEMP/adp-devsite-utils"
+          pushd "$RUNNER_TEMP/adp-devsite-utils"
+          npm install --omit=dev --no-audit --no-fund
+          popd
+          node "$RUNNER_TEMP/adp-devsite-utils/index.js" buildSiteMetadata -v
 
       - name: Commit and push if changed
         env:

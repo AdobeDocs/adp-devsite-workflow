@@ -36,7 +36,12 @@ jobs:
           private-key: ${{ secrets.ADP_DEVSITE_APP_PRIVATE_KEY }}
 
       - name: Build Contributors
-        run: npx --yes github:AdobeDocs/adp-devsite-utils buildContributorsV2 -v $BUILD_ALL_FLAG
+        run: |
+          git clone --depth 1 https://github.com/AdobeDocs/adp-devsite-utils.git "$RUNNER_TEMP/adp-devsite-utils"
+          pushd "$RUNNER_TEMP/adp-devsite-utils"
+          npm install --omit=dev --no-audit --no-fund
+          popd
+          node "$RUNNER_TEMP/adp-devsite-utils/index.js" buildContributorsV2 -v $BUILD_ALL_FLAG
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
           BASE_SHA: ${{ inputs.baseSha || github.event.before }}

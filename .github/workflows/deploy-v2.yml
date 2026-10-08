@@ -213,12 +213,29 @@ jobs:
           sha: ${{ steps.get-head-sha.outputs.head_sha }}
           base_sha: ${{ needs.set-state.outputs.base_sha }}
 
+      - name: Get changed files for cache clearing
+        if: needs.set-state.outputs.deploy_all == 'false' && steps.changed-files-specific.outputs.any_modified == 'true' && (needs.set-state.outputs.deploy_stage == 'true' || needs.set-state.outputs.deploy_prod == 'true')
+        uses: tj-actions/changed-files@v47.0.6
+        with:
+          json: true
+          # File output needs escaping; keep the deployment action's outputs unchanged.
+          escape_json: true
+          safe_output: false
+          write_output_files: true
+          output_dir: ${{ runner.temp }}/devsite-cache-files
+          files: |
+            src/pages/**
+          sha: ${{ steps.get-head-sha.outputs.head_sha }}
+          base_sha: ${{ needs.set-state.outputs.base_sha }}
+
       - name: Get all files from src/pages folder
         if: needs.set-state.outputs.deploy_all == 'true'
         id: all-files
         uses: actions/github-script@v8
         with:
           script: |
+            const { mkdirSync, writeFileSync } = require('node:fs');
+            const { join } = require('node:path');
             const patterns = ['src/pages/**/*.*'];
             const globberSrcFiles = await glob.create(patterns[0]);
             const srcFiles = await globberSrcFiles.glob();
@@ -233,6 +250,9 @@ jobs:
 
             const serializedAllFiles = JSON.stringify(srcFilesFixedPaths);
             core.setOutput('all_files', serializedAllFiles);
+            const outputDir = join(process.env.RUNNER_TEMP, 'devsite-cache-files');
+            mkdirSync(outputDir, { recursive: true });
+            writeFileSync(join(outputDir, 'all_files.json'), serializedAllFiles, 'utf8');
 
       - name: Deploy only changed files to stage
         if: needs.set-state.outputs.deploy_stage == 'true' && steps.changed-files-specific.outputs.any_modified == 'true' && needs.set-state.outputs.deploy_all == 'false'
@@ -278,12 +298,15 @@ jobs:
         uses: actions/github-script@v8
         with:
           script: |
+            const { readFileSync } = require('node:fs');
+            const { join } = require('node:path');
+            const readFiles = (name) => JSON.parse(readFileSync(join(process.env.RUNNER_TEMP, 'devsite-cache-files', name), 'utf8'));
             const script = require('./scripts/deploy.js');
 
             await script({
               core,
-              changes: ${{ steps.changed-files-specific.outputs.all_changed_files }},
-              deletions: ${{ steps.changed-files-specific.outputs.deleted_files }},
+              changes: readFiles('all_changed_files.json'),
+              deletions: readFiles('deleted_files.json'),
               operation: "cache",
               siteEnv: "stage",
               branch: "${{ needs.set-state.outputs.branch_short_ref }}",
@@ -295,11 +318,14 @@ jobs:
         uses: actions/github-script@v8
         with:
           script: |
+            const { readFileSync } = require('node:fs');
+            const { join } = require('node:path');
+            const readFiles = (name) => JSON.parse(readFileSync(join(process.env.RUNNER_TEMP, 'devsite-cache-files', name), 'utf8'));
             const script = require('./scripts/deploy.js');
 
             await script({
               core,
-              changes: ${{ steps.all-files.outputs.all_files }},
+              changes: readFiles('all_files.json'),
               deletions: [],
               operation: "cache",
               siteEnv: "stage",
@@ -390,12 +416,15 @@ jobs:
         uses: actions/github-script@v8
         with:
           script: |
+            const { readFileSync } = require('node:fs');
+            const { join } = require('node:path');
+            const readFiles = (name) => JSON.parse(readFileSync(join(process.env.RUNNER_TEMP, 'devsite-cache-files', name), 'utf8'));
             const script = require('./scripts/deploy.js');
 
             await script({
               core,
-              changes: ${{ steps.changed-files-specific.outputs.all_changed_files }},
-              deletions: ${{ steps.changed-files-specific.outputs.deleted_files }},
+              changes: readFiles('all_changed_files.json'),
+              deletions: readFiles('deleted_files.json'),
               operation: "cache",
               siteEnv: "stage",
               branch: "${{ needs.set-state.outputs.branch_short_ref }}",
@@ -404,8 +433,8 @@ jobs:
 
             await script({
               core,
-              changes: ${{ steps.changed-files-specific.outputs.all_changed_files }},
-              deletions: ${{ steps.changed-files-specific.outputs.deleted_files }},
+              changes: readFiles('all_changed_files.json'),
+              deletions: readFiles('deleted_files.json'),
               operation: "cache",
               siteEnv: "prod",
               branch: "${{ needs.set-state.outputs.branch_short_ref }}",
@@ -417,11 +446,14 @@ jobs:
         uses: actions/github-script@v8
         with:
           script: |
+            const { readFileSync } = require('node:fs');
+            const { join } = require('node:path');
+            const readFiles = (name) => JSON.parse(readFileSync(join(process.env.RUNNER_TEMP, 'devsite-cache-files', name), 'utf8'));
             const script = require('./scripts/deploy.js');
 
             await script({
               core,
-              changes: ${{ steps.all-files.outputs.all_files }},
+              changes: readFiles('all_files.json'),
               deletions: [],
               operation: "cache",
               siteEnv: "stage",
@@ -431,7 +463,7 @@ jobs:
 
             await script({
               core,
-              changes: ${{ steps.all-files.outputs.all_files }},
+              changes: readFiles('all_files.json'),
               deletions: [],
               operation: "cache",
               siteEnv: "prod",

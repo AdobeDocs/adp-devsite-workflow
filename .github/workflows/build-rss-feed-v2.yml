@@ -1,0 +1,116 @@
+---
+name: Build RSS Feed
+on:
+  workflow_call:
+    inputs:
+      baseSha:
+        type: string
+        required: false
+      buildAll:
+        type: boolean
+        required: false
+        default: false
+      changelogPath:
+        description: Path of the changelog file to build the RSS feed from, e.g. src/pages/guides/changelog/index.md
+        type: string
+        required: true
+      feedPath:
+        description: Path where the generated RSS feed is written
+        type: string
+        required: false
+        default: "src/pages/feed.xml"
+
+jobs:
+  build-rss-feed:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Check if changelog changed
+        id: changelog-changed
+        env:
+          BASE_SHA: ${{ inputs.baseSha || github.event.before }}
+          BUILD_ALL: ${{ inputs.buildAll }}
+          CHANGELOG_PATH: ${{ inputs.changelogPath }}
+          FEED_PATH: ${{ inputs.feedPath }}
+        run: |
+          # Always build on a full build, without a usable base SHA, or when the feed does not exist yet
+          if [ "$BUILD_ALL" = "true" ] || [ ! -f "$FEED_PATH" ] || ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
+            changed=true
+          elif git diff --name-only "$BASE_SHA" HEAD -- "$CHANGELOG_PATH" | grep -q .; then
+            changed=true
+          else
+            changed=false
+          fi
+          echo "Changelog changed - $changed"
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout Scripts Repo
+        if: steps.changelog-changed.outputs.changed == 'true'
+        uses: actions/checkout@v6
+        with:
+          repository: AdobeDocs/adp-devsite-scripts
+          path: scripts
+          ref: main
+          persist-credentials: false
+
+      - name: Generate GitHub App token
+        if: steps.changelog-changed.outputs.changed == 'true'
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ secrets.ADP_DEVSITE_APP_ID }}
+          private-key: ${{ secrets.ADP_DEVSITE_APP_PRIVATE_KEY }}
+
+      - name: Get changelog XML content
+        if: steps.changelog-changed.outputs.changed == 'true'
+        id: changelog-xml
+        uses: actions/github-script@v8
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          CHANGELOG_PATH: ${{ inputs.changelogPath }}
+          FEED_PATH: ${{ inputs.feedPath }}
+          BRANCH: ${{ github.ref_name }}
+          FEED_CONTENT_FILE: ${{ runner.temp }}/feed.xml
+        with:
+          script: |
+            const fs = require('fs');
+            const { getChangeLogXmlContent } = require('./scripts/generate-rss-feed.js');
+            const { owner, repo } = context.repo;
+            const { GITHUB_TOKEN, CHANGELOG_PATH, FEED_PATH, FEED_CONTENT_FILE, BRANCH } = process.env;
+
+            const xmlContent = await getChangeLogXmlContent(owner, repo, GITHUB_TOKEN, CHANGELOG_PATH, FEED_PATH, BRANCH);
+            if (!xmlContent) {
+              console.log(`No feed content generated from ${CHANGELOG_PATH}. Skipping ${FEED_PATH}.`);
+              core.setOutput('has_content', 'false');
+              return;
+            }
+
+            // The XML is handed to the next step through a file, it is too large for a step output
+            fs.writeFileSync(FEED_CONTENT_FILE, xmlContent, 'utf8');
+            core.setOutput('has_content', 'true');
+
+      - name: Create feed file, commit and push if changed
+        if: steps.changelog-xml.outputs.has_content == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          REPO: ${{ github.repository }}
+          FEED_PATH: ${{ inputs.feedPath }}
+          FEED_CONTENT_FILE: ${{ runner.temp }}/feed.xml
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${REPO}"
+          # Pull first so the generated feed always overwrites whatever is on the branch
+          git pull origin "${GITHUB_REF#refs/heads/}" --ff-only
+          mkdir -p "$(dirname "$FEED_PATH")"
+          cp "$FEED_CONTENT_FILE" "$FEED_PATH"
+          git add -- "$FEED_PATH"
+          git diff --cached --quiet || git commit -m "chore: auto-generate rss feed"
+          git push

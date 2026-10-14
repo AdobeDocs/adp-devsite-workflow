@@ -57,7 +57,7 @@ jobs:
         with:
           repository: AdobeDocs/adp-devsite-scripts
           path: scripts
-          ref: main
+          ref: rss-feed
           persist-credentials: false
 
       - name: Generate GitHub App token

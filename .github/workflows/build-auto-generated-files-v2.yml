@@ -10,6 +10,16 @@ on:
         type: boolean
         required: false
         default: false
+      changelogPath:
+        description: Path of the changelog file to build the RSS feed from, e.g. src/pages/guides/changelog/index.md. The feed is skipped when empty.
+        type: string
+        required: false
+        default: ""
+      feedPath:
+        description: Path where the generated RSS feed is written
+        type: string
+        required: false
+        default: "src/pages/feed.xml"
     secrets:
       ADP_DEVSITE_APP_ID:
         required: true
@@ -38,3 +48,18 @@ jobs:
     secrets:
       ADP_DEVSITE_APP_ID: ${{ secrets.ADP_DEVSITE_APP_ID }}
       ADP_DEVSITE_APP_PRIVATE_KEY: ${{ secrets.ADP_DEVSITE_APP_PRIVATE_KEY }}
+
+  build-rss-feed:
+    name: Build RSS Feed
+    needs: build-site-metadata
+    if: |
+      always() &&
+      inputs.changelogPath != '' &&
+      github.repository != 'AdobeDocs/dev-docs-template'
+    uses: ./.github/workflows/build-rss-feed-v2.yml
+    with:
+      baseSha: ${{ inputs.baseSha }}
+      buildAll: ${{ inputs.buildAll }}
+      changelogPath: ${{ inputs.changelogPath }}
+      feedPath: ${{ inputs.feedPath }}
+    secrets: inherit

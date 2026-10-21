@@ -12,6 +12,16 @@ on:
       deployAll:
         type: boolean
         default: false
+      changelogPath:
+        description: Path of the changelog file to build the RSS feed from, e.g. src/pages/guides/changelog/index.md. The feed is skipped when empty.
+        type: string
+        required: false
+        default: ""
+      feedPath:
+        description: Path where the generated RSS feed is written
+        type: string
+        required: false
+        default: "src/pages/feed.xml"
 
 jobs:
   validate-prod-branch:
@@ -145,6 +155,8 @@ jobs:
     with:
       baseSha: ${{ needs.set-state.outputs.base_sha }}
       buildAll: ${{ inputs.deployAll }}
+      changelogPath: ${{ inputs.changelogPath }}
+      feedPath: ${{ inputs.feedPath }}
     secrets: inherit
 
   deploy:

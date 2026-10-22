@@ -35,7 +35,7 @@ jobs:
           BASE_REF: ${{ inputs.base_ref }}
         run: |
           git fetch origin "$BASE_REF"
-          CHANGED_FILES=$(git diff --diff-filter=d --name-only "origin/${BASE_REF}...HEAD")
+          CHANGED_FILES=$(git diff --name-only "origin/${BASE_REF}...HEAD")
           if echo "$CHANGED_FILES" | grep -q "^src/pages/"; then
             echo "run_lint=true" >> $GITHUB_OUTPUT
             echo "✅ Changes detected in src/pages/"
@@ -55,7 +55,8 @@ jobs:
           name: linter-report
           path: lint-skipped.txt
 
-      # src/pages changed — run the linter on changed .md files only and upload the report.
+      # src/pages changed — run the linter on changed .md files only (or the whole repo
+      # if there are none, e.g. only deletions or images) and upload the report.
       - name: Lint
         if: steps.filter.outputs.run_lint == 'true'
         id: lint

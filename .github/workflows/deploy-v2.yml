@@ -248,6 +248,8 @@ jobs:
       - name: Deploy only changed files to stage
         if: needs.set-state.outputs.deploy_stage == 'true' && steps.changed-files-specific.outputs.any_modified == 'true' && needs.set-state.outputs.deploy_all == 'false'
         uses: actions/github-script@v8
+        env:
+          AEM_ADMIN_API_KEY: ${{ secrets.AEM_ADMIN_API_KEY_STAGE }}
         with:
           script: |
             const script = require('./scripts/deploy.js');
@@ -265,6 +267,8 @@ jobs:
       - name: Force deploy all files to stage
         if: needs.set-state.outputs.deploy_stage == 'true' && needs.set-state.outputs.deploy_all == 'true'
         uses: actions/github-script@v8
+        env:
+          AEM_ADMIN_API_KEY: ${{ secrets.AEM_ADMIN_API_KEY_STAGE }}
         with:
           script: |
             const script = require('./scripts/deploy.js');
@@ -282,6 +286,8 @@ jobs:
       - name: Deploy only changed files to prod (Step 1 of 2)
         if: needs.set-state.outputs.deploy_prod == 'true' && steps.changed-files-specific.outputs.any_modified == 'true' && needs.set-state.outputs.deploy_all == 'false'
         uses: actions/github-script@v8
+        env:
+          AEM_ADMIN_API_KEY: ${{ secrets.AEM_ADMIN_API_KEY_PROD }}
         with:
           script: |
             const script = require('./scripts/deploy.js');
@@ -299,6 +305,8 @@ jobs:
       - name: Force deploy all files to prod (Step 1 of 2)
         if: needs.set-state.outputs.deploy_prod == 'true' && needs.set-state.outputs.deploy_all == 'true'
         uses: actions/github-script@v8
+        env:
+          AEM_ADMIN_API_KEY: ${{ secrets.AEM_ADMIN_API_KEY_PROD }}
         with:
           script: |
             const script = require('./scripts/deploy.js');
@@ -316,6 +324,8 @@ jobs:
       - name: Deploy only changed files to prod (Step 2 of 2)
         if: needs.set-state.outputs.deploy_prod == 'true' && steps.changed-files-specific.outputs.any_modified == 'true' && needs.set-state.outputs.deploy_all == 'false'
         uses: actions/github-script@v8
+        env:
+          AEM_ADMIN_API_KEY: ${{ secrets.AEM_ADMIN_API_KEY_PROD }}
         with:
           script: |
             const script = require('./scripts/deploy.js');
@@ -333,6 +343,8 @@ jobs:
       - name: Force deploy all files to prod (Step 2 of 2)
         if: needs.set-state.outputs.deploy_prod == 'true' && needs.set-state.outputs.deploy_all == 'true'
         uses: actions/github-script@v8
+        env:
+          AEM_ADMIN_API_KEY: ${{ secrets.AEM_ADMIN_API_KEY_PROD }}
         with:
           script: |
             const script = require('./scripts/deploy.js');

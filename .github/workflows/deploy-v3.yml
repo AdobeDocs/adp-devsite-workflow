@@ -220,6 +220,8 @@ jobs:
         with:
           json: true
           escape_json: false
+          # Report renames as delete + add so the old path gets unpublished
+          output_renamed_files_as_deleted_and_added: true
           files: |
             src/pages/**
           sha: ${{ steps.get-head-sha.outputs.head_sha }}

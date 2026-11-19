@@ -98,7 +98,7 @@ jobs:
         with:
           repository: AdobeDocs/adp-devsite-scripts
           path: scripts
-          ref: main
+          ref: purge-issue
 
       - name: Get path prefix
         uses: actions/github-script@v8

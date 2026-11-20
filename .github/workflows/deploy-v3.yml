@@ -178,7 +178,7 @@ jobs:
         with:
           repository: AdobeDocs/adp-devsite-scripts
           path: scripts
-          ref: purge-issue
+          ref: large-files
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
